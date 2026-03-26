@@ -214,4 +214,120 @@ final class SubscriptionService
             'notes' => $notes ?? ('Auto extend +' . $days . ' days'),
         ]);
     }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function pendingRequests(int $limit = 100): array
+    {
+        return $this->subscriptions->listPendingExtendRequests($limit);
+    }
+
+    /**
+     * @return array{ok: bool, message: string}
+     */
+    public function approveRequest(int $requestActionId, string $actorLabel): array
+    {
+        $request = $this->subscriptions->findAdminActionById($requestActionId);
+        if ($request === null || (string) ($request['action_type'] ?? '') !== 'REQUEST_EXTEND') {
+            return ['ok' => false, 'message' => 'Request tidak ditemukan.'];
+        }
+        if ($this->subscriptions->hasApprovedRequest($requestActionId)) {
+            return ['ok' => false, 'message' => 'Request sudah pernah di-approve.'];
+        }
+
+        $userId = (int) ($request['user_id'] ?? 0);
+        $planId = (int) ($request['plan_id'] ?? 0);
+        $durationDays = (int) ($request['duration_days'] ?? 0);
+        $durationType = (string) (($request['duration_type'] ?? 'DAYS'));
+        if ($userId <= 0 || $planId <= 0 || $durationDays <= 0) {
+            return ['ok' => false, 'message' => 'Data request tidak valid.'];
+        }
+
+        $user = $this->users->findWithPlanById($userId);
+        if ($user === null) {
+            return ['ok' => false, 'message' => 'User tidak ditemukan.'];
+        }
+
+        $oldPlanId = (int) $user['plan_id'];
+        $oldExpiredAt = is_string($user['plan_expired_at'] ?? null) ? (string) $user['plan_expired_at'] : null;
+        $now = new DateTimeImmutable('now');
+
+        $baseStart = $now;
+        if ($oldExpiredAt !== null && trim($oldExpiredAt) !== '') {
+            $currentExpiry = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $oldExpiredAt)
+                ?: new DateTimeImmutable($oldExpiredAt);
+            if ($currentExpiry > $now) {
+                $baseStart = $currentExpiry;
+            }
+        }
+
+        $newExpiry = $baseStart->modify('+' . $durationDays . ' days');
+        $newExpirySql = $newExpiry->format('Y-m-d H:i:s');
+
+        $this->users->updatePlan($userId, $planId, $newExpirySql);
+
+        $subscriptionId = $this->subscriptions->create([
+            'user_id' => $userId,
+            'plan_id' => $planId,
+            'duration_type' => $durationType,
+            'duration_days' => $durationDays,
+            'started_at' => $now->format('Y-m-d H:i:s'),
+            'expired_at' => $newExpirySql,
+            'status' => 'ACTIVE',
+            'source_type' => 'MANUAL_ADMIN',
+            'source_reference' => (string) $requestActionId,
+            'notes' => 'Approved from request #' . $requestActionId,
+        ]);
+
+        $this->subscriptions->createLog([
+            'subscription_id' => $subscriptionId,
+            'user_id' => $userId,
+            'action_type' => $oldPlanId === $planId ? 'EXTEND' : 'CHANGE_PLAN',
+            'old_plan_id' => $oldPlanId,
+            'new_plan_id' => $planId,
+            'old_expired_at' => $oldExpiredAt,
+            'new_expired_at' => $newExpirySql,
+            'actor_label' => $actorLabel,
+            'notes' => 'Approval request #' . $requestActionId,
+        ]);
+
+        $this->subscriptions->createAdminAction([
+            'user_id' => $userId,
+            'action_type' => 'APPROVE_EXTEND',
+            'plan_id' => $planId,
+            'duration_type' => $durationType,
+            'duration_days' => $durationDays,
+            'actor_label' => $actorLabel,
+            'notes' => 'request_action_id=' . $requestActionId,
+        ]);
+
+        return ['ok' => true, 'message' => 'Request berhasil di-approve.'];
+    }
+
+    /**
+     * @return array{ok: bool, message: string}
+     */
+    public function rejectRequest(int $requestActionId, string $actorLabel): array
+    {
+        $request = $this->subscriptions->findAdminActionById($requestActionId);
+        if ($request === null || (string) ($request['action_type'] ?? '') !== 'REQUEST_EXTEND') {
+            return ['ok' => false, 'message' => 'Request tidak ditemukan.'];
+        }
+        if ($this->subscriptions->hasApprovedRequest($requestActionId)) {
+            return ['ok' => false, 'message' => 'Request sudah diproses (approved).'];
+        }
+
+        $this->subscriptions->createAdminAction([
+            'user_id' => (int) ($request['user_id'] ?? 0),
+            'action_type' => 'REJECT_EXTEND',
+            'plan_id' => (int) ($request['plan_id'] ?? 0),
+            'duration_type' => (string) ($request['duration_type'] ?? 'DAYS'),
+            'duration_days' => (int) ($request['duration_days'] ?? 0),
+            'actor_label' => $actorLabel,
+            'notes' => 'request_action_id=' . $requestActionId,
+        ]);
+
+        return ['ok' => true, 'message' => 'Request ditolak.'];
+    }
 }

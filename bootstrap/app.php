@@ -68,5 +68,19 @@ $router->get('/price-data', [App\Controllers\PriceDataController::class, 'index'
     App\Middleware\SubscriptionMiddleware::class,
     App\Middleware\PlanFeatureMiddleware::class,
 ]);
+$router->get('/admin/subscription-requests', [App\Controllers\AdminSubscriptionController::class, 'index'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+]);
+$router->post('/admin/subscription-requests/approve', [App\Controllers\AdminSubscriptionController::class, 'approve'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/admin/subscription-requests/reject', [App\Controllers\AdminSubscriptionController::class, 'reject'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
 
 return $router;

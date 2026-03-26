@@ -12,6 +12,9 @@
       <div class="header-inner">
         <div class="mobile-brand">AlbionCraft</div>
         <div class="header-actions">
+          <?php if (!empty($is_admin)): ?>
+            <a class="button button-danger" href="/admin/subscription-requests">Admin Requests</a>
+          <?php endif; ?>
           <a class="button button-ghost" href="/subscription">Subscription</a>
           <a class="button button-ghost" href="/referral">Referral</a>
           <a class="button button-ghost" href="/price-data">Data Harga</a>

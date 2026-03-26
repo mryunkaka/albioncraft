@@ -9,6 +9,7 @@ use App\Support\Response;
 use App\Support\Session;
 use App\Support\View;
 use App\Support\Csrf;
+use App\Support\AdminAccess;
 
 final class DashboardController
 {
@@ -20,8 +21,12 @@ final class DashboardController
             return;
         }
 
+        $auth = Session::get('auth');
+        $email = is_array($auth) ? (string) ($auth['email'] ?? '') : '';
+
         Response::html(View::render('dashboard/index', [
-            'user' => Session::get('auth'),
+            'user' => $auth,
+            'is_admin' => AdminAccess::isAdminEmail($email),
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),

@@ -116,5 +116,88 @@ final class SubscriptionRepository
 
         return (int) $this->db->lastInsertId();
     }
-}
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findAdminActionById(int $id): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM admin_subscription_actions WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    public function hasApprovedRequest(int $requestActionId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT id
+             FROM admin_subscription_actions
+             WHERE action_type = :action_type
+               AND notes = :notes
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'action_type' => 'APPROVE_EXTEND',
+            'notes' => 'request_action_id=' . $requestActionId,
+        ]);
+
+        $value = $stmt->fetchColumn();
+        return $value !== false;
+    }
+
+    public function hasRejectedRequest(int $requestActionId): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT id
+             FROM admin_subscription_actions
+             WHERE action_type = :action_type
+               AND notes = :notes
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'action_type' => 'REJECT_EXTEND',
+            'notes' => 'request_action_id=' . $requestActionId,
+        ]);
+
+        $value = $stmt->fetchColumn();
+        return $value !== false;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listPendingExtendRequests(int $limit = 100): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT a.*, u.username, u.email, p.code AS plan_code, p.name AS plan_name
+             FROM admin_subscription_actions a
+             JOIN users u ON u.id = a.user_id
+             LEFT JOIN plans p ON p.id = a.plan_id
+             WHERE a.action_type = :action_type
+             ORDER BY a.id DESC
+             LIMIT :limit_value'
+        );
+        $stmt->bindValue(':action_type', 'REQUEST_EXTEND');
+        $stmt->bindValue(':limit_value', max(1, $limit), PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0 && ($this->hasApprovedRequest($id) || $this->hasRejectedRequest($id))) {
+                continue;
+            }
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+}

@@ -89,6 +89,19 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - register dengan referral code sekarang membuat relasi referral + reward ledger
   - reward referral otomatis memanggil extend hari subscription pada referrer
   - mode extend berbayar tetap `manual admin` (request disimpan di `admin_subscription_actions`)
+- Admin approval flow untuk subscription request sudah ditambahkan:
+  - middleware baru: `AdminMiddleware` (berbasis env `ADMIN_EMAILS`)
+  - helper akses: `app/Support/AdminAccess.php`
+  - halaman admin: `/admin/subscription-requests`
+  - aksi admin:
+    - `POST /admin/subscription-requests/approve`
+    - `POST /admin/subscription-requests/reject`
+  - approval menulis:
+    - update `users.plan_id` dan `users.plan_expired_at`
+    - insert `subscriptions`
+    - insert `subscription_logs`
+    - insert `admin_subscription_actions` action `APPROVE_EXTEND`
+  - reject menulis `admin_subscription_actions` action `REJECT_EXTEND`
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -146,10 +159,8 @@ php tests/run_calculation_engine_tests.php
 3. Hardening Auth lanjutan:
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
-4. Lengkapi flow admin untuk subscription:
-   - endpoint/admin tool untuk approve request `REQUEST_EXTEND`
-   - tulis `subscriptions` + `subscription_logs` secara konsisten saat approval
-5. Tambahkan halaman dan endpoint manajemen request extend (admin-side minimal).
-6. Lanjutkan halaman PRO Price Data dari placeholder ke CRUD + pagination + search.
-7. Tambahkan automated test untuk flow subscription/referral dasar.
+4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
+5. Lanjutkan halaman PRO Price Data dari placeholder ke CRUD + pagination + search.
+6. Tambahkan halaman khusus history admin action (opsional, read-only).
+7. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
 8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
