@@ -27,55 +27,29 @@ git remote -v
 ```
 
 ## 3. Deploy Script (Cron + Manual)
-File deploy sudah disediakan di repo:
+File deploy sederhana (mengikuti pola yang sudah terbukti jalan seperti `deploy-sigaji.php`) ada di repo:
 - `deploy-albion.php`
 
-Target folder repo di script:
+Rekomendasi lokasi di hosting:
+- `/home/hark8423/public_html/deploy-albion.php`
+
+Script ini akan melakukan `git pull` untuk repo yang ada di:
 - `/home/hark8423/public_html/albioncraft`
-
-Script deploy ada di 2 lokasi (sudah disiapkan di repo):
-- CLI/Cron (utama): `/home/hark8423/public_html/albioncraft/deploy-albion.php`
-- Web trigger (opsional): `/home/hark8423/public_html/albioncraft/public/deploy-albion.php`
-
-Alternatif paling sederhana (cron only, tanpa token):
-- `/home/hark8423/public_html/deploy-cron.php`
-- Script ini hanya boleh jalan via CLI, jika dibuka via browser akan 403.
-
-### Token Untuk Manual (Wajib)
-Agar script tidak bisa dieksekusi sembarang orang dari browser, manual deploy wajib token.
-
-Buat file token:
-- `/home/hark8423/public_html/albioncraft/.deploy-token`
-
-Isi dengan string random panjang (contoh 32+ karakter).
-
-Lalu akses:
-```text
-/deploy-albion.php?token=ISI_TOKEN_ANDA
-```
 
 ### Cron
 Rekomendasi interval:
 - tiap 5 sampai 15 menit (lebih aman untuk shared hosting)
 
-Contoh (tiap 5 menit):
+Contoh (tiap menit, sama seperti referensi Anda):
 ```text
-*/5 * * * * /usr/bin/php /home/hark8423/public_html/albioncraft/deploy-albion.php
+* * * * * /usr/bin/php /home/hark8423/public_html/deploy-albion.php
 ```
 
-Jika Anda memakai script sederhana `deploy-cron.php`:
-```text
-*/5 * * * * /usr/bin/php -q /home/hark8423/public_html/deploy-cron.php
-```
+## 3.1 Catatan Cron: Jangan Pakai URL
+Cron command harus berupa:
+- `/usr/bin/php /path/script.php`
 
-## 3.1 Error Umum Cron: "Permission denied"
-Jika log cron menampilkan:
-`/usr/local/cpanel/bin/jailshell: ... deploy-albion.php: Permission denied`
-biasanya karena cron mencoba mengeksekusi file `.php` langsung tanpa interpreter PHP.
-
-Yang benar:
-- Pakai `php /path/script.php` (contoh di atas).
-- Permission file script cukup `644` (tidak perlu executable).
+Bukan URL dan tidak memakai query string seperti `?token=...`.
 
 Log deploy:
 - `/home/hark8423/git-deploy-albion.log`

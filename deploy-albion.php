@@ -4,89 +4,39 @@ declare(strict_types=1);
 
 /*
 |--------------------------------------------------------------------------
-| Manual/Cron Deploy - cPanel Shared Hosting (PHP Native)
+| Manual Deploy PHP Native - cPanel Shared Hosting
 |--------------------------------------------------------------------------
 | Simpan file ini sebagai:
-|   /home/hark8423/public_html/albioncraft/deploy-albion.php
+| /home/hark8423/public_html/deploy-albion.php
 |
-| Repo aplikasi:
-|   /home/hark8423/public_html/albioncraft
+| Cara pakai:
+| 1. Repo sudah ada langsung di /home/hark8423/public_html/albioncraft
+| 2. Buka file ini dari browser saat ingin deploy manual
+| 3. Script akan langsung git pull branch main
 |
-| Cron example:
-|   (every 5 minutes) /usr/bin/php /home/hark8423/public_html/albioncraft/deploy-albion.php
-|
-| Manual via browser (opsional, WAJIB token):
-|   https://albion.harikenangan.my.id/deploy-albion.php?token=XXXX
-| Token diambil dari file:
-|   /home/hark8423/public_html/albioncraft/.deploy-token
+| Cron (jika ingin otomatis, format seperti deploy yang sudah Anda pakai):
+| * * * * * /usr/bin/php /home/hark8423/public_html/deploy-albion.php
 |
 | Catatan:
-| - Jika hosting mematikan `shell_exec` atau tidak ada `git`, deploy akan gagal.
-| - Disarankan interval cron 5-15 menit, bukan tiap menit.
+| - Jika hosting mematikan `shell_exec` atau akses `git`, deploy akan gagal.
 */
 
 $deployPath = '/home/hark8423/public_html/albioncraft';
-$remote = 'origin';
 $branch = 'main';
+$remote = 'origin';
 $logFile = '/home/hark8423/git-deploy-albion.log';
-$lockFile = '/home/hark8423/git-deploy-albion.lock';
-// Token file disimpan di folder repo agar mudah dikelola, dan harus dikecualikan dari `git clean`.
-$tokenFile = $deployPath . '/.deploy-token';
 
 header('Content-Type: text/plain; charset=UTF-8');
-@set_time_limit(180);
+@set_time_limit(120);
 
-$isCli = (PHP_SAPI === 'cli');
-$now = date('Y-m-d H:i:s');
+echo "Menjalankan deploy AlbionCraft...\n\n";
 
-$writeLog = static function (string $message) use ($logFile): void {
-    @file_put_contents($logFile, $message . "\n", FILE_APPEND);
-};
-
-$fail = static function (int $code, string $message) use ($isCli, $now, $writeLog): void {
-    if (! $isCli) {
-        http_response_code($code);
-    }
+if (!is_dir($deployPath) || !is_dir($deployPath . '/.git')) {
+    $message = "Deploy gagal: folder aplikasi atau repository git tidak ditemukan di {$deployPath}";
+    http_response_code(500);
+    file_put_contents($logFile, date('Y-m-d H:i:s') . " - {$message}\n", FILE_APPEND);
     echo $message . "\n";
-    $writeLog($now . ' - ' . $message);
     exit;
-};
-
-// Web access protection: require token.
-if (! $isCli) {
-    $token = isset($_GET['token']) ? trim((string) $_GET['token']) : '';
-    $expected = '';
-    if (is_file($tokenFile)) {
-        $expected = trim((string) @file_get_contents($tokenFile));
-    }
-
-    if ($expected === '') {
-        $fail(403, 'Forbidden: token file not set. Create /home/hark8423/public_html/.deploy-token first.');
-    }
-    if (! hash_equals($expected, $token)) {
-        $fail(403, 'Forbidden: invalid token.');
-    }
-}
-
-// Basic lock to avoid overlapping deploys.
-$lockHandle = @fopen($lockFile, 'c+');
-if (! is_resource($lockHandle)) {
-    $fail(500, "Deploy gagal: tidak bisa membuat lock file di {$lockFile}");
-}
-if (! @flock($lockHandle, LOCK_EX | LOCK_NB)) {
-    echo "Deploy skip: masih ada proses deploy lain yang berjalan.\n";
-    exit;
-}
-
-echo "Deploy AlbionCraft\n";
-echo "Waktu: {$now}\n\n";
-
-if (! function_exists('shell_exec')) {
-    $fail(500, 'Deploy gagal: shell_exec tidak tersedia (kemungkinan disable_functions).');
-}
-
-if (! is_dir($deployPath) || ! is_dir($deployPath . '/.git')) {
-    $fail(500, "Deploy gagal: folder aplikasi atau repository git tidak ditemukan di {$deployPath}");
 }
 
 chdir($deployPath);
@@ -96,26 +46,18 @@ $run = static function (string $command): string {
     return trim((string) $result);
 };
 
-$gitVersion = $run('git --version');
-if ($gitVersion === '') {
-    $fail(500, 'Deploy gagal: `git` tidak tersedia atau tidak bisa dijalankan oleh PHP.');
-}
-
 $oldCommit = $run('git rev-parse HEAD');
+
 echo "Path aktif : {$deployPath}\n";
-echo "Git        : {$gitVersion}\n";
 echo "Commit lama: " . ($oldCommit !== '' ? $oldCommit : '[gagal membaca commit]') . "\n\n";
 
 // Bersihkan perubahan lokal, tapi jangan hapus file runtime.
-$cleanCmd = 'git reset --hard HEAD'
-    . ' && git clean -fd -e .env -e .deploy-token -e storage -e public/uploads';
-$cleanOutput = $run($cleanCmd);
+$cleanOutput = $run('git reset --hard HEAD && git clean -fd -e .env -e public/uploads -e storage');
 
 echo "Output clean:\n" . ($cleanOutput !== '' ? $cleanOutput : '[kosong]') . "\n\n";
 
-// Pull update terbaru dari remote.
-$pullCmd = sprintf('git pull %s %s', escapeshellarg($remote), escapeshellarg($branch));
-$pullOutput = $run($pullCmd);
+// Ambil update terbaru dari GitHub.
+$pullOutput = $run(sprintf('git pull %s %s', escapeshellarg($remote), escapeshellarg($branch)));
 $newCommit = $run('git rev-parse HEAD');
 
 echo "Output git pull:\n" . ($pullOutput !== '' ? $pullOutput : '[kosong]') . "\n\n";
@@ -123,30 +65,48 @@ echo "Commit baru: " . ($newCommit !== '' ? $newCommit : '[gagal membaca commit]
 
 // Pastikan folder runtime tetap ada.
 $runtimeDirs = [
-    $deployPath . '/storage',
     $deployPath . '/public/uploads',
+    $deployPath . '/storage',
 ];
+
 foreach ($runtimeDirs as $dir) {
-    if (! is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
     }
 }
 
-$changed = ($oldCommit !== '' && $newCommit !== '' && $oldCommit !== $newCommit);
+$date = date('Y-m-d H:i:s');
+$changed = $oldCommit !== $newCommit;
 
-$logMessage = $now
-    . ($changed ? " - Deploy berhasil" : " - Tidak ada perubahan (atau commit tidak terbaca)")
-    . "\nPath      : {$deployPath}"
-    . "\nCommit    : {$oldCommit} -> {$newCommit}"
-    . "\nClean     : {$cleanOutput}"
-    . "\nPull      : {$pullOutput}"
-    . "\n" . str_repeat('-', 60);
+// Log format dibuat simpel seperti referensi user:
+// - Selalu tulis 1 baris RUN
+// - Jika ada perubahan, tulis 1 baris per commit
+$pullCompact = preg_replace('/\s+/', ' ', trim((string) $pullOutput));
+$runLine = $date
+    . ' - RUN: '
+    . ($oldCommit !== '' ? $oldCommit : '[unknown]')
+    . ' -> '
+    . ($newCommit !== '' ? $newCommit : '[unknown]')
+    . ' | pull='
+    . ($pullCompact !== '' ? $pullCompact : '[empty]')
+    . "\n";
+file_put_contents($logFile, $runLine, FILE_APPEND);
 
-$writeLog($logMessage);
+if ($changed && $oldCommit !== '' && $newCommit !== '') {
+    $commits = $run(sprintf(
+        'git log %s..%s --pretty=format:"%%h | %%an | %%s"',
+        escapeshellarg($oldCommit),
+        escapeshellarg($newCommit)
+    ));
+    $lines = array_filter(array_map('trim', explode("\n", (string) $commits)));
+    foreach ($lines as $line) {
+        file_put_contents($logFile, $date . ' - Deploy ' . $line . "\n", FILE_APPEND);
+    }
+}
 
 if ($oldCommit === '' || $newCommit === '') {
-    echo "Peringatan: commit tidak terbaca. Kemungkinan akses `git` dibatasi hosting.\n";
+    echo "Peringatan: commit tidak terbaca. Kemungkinan `shell_exec` atau akses `git` dibatasi hosting.\n";
 }
 
 echo $changed ? "Status: Deploy berhasil.\n" : "Status: Tidak ada perubahan.\n";
-echo "Log: {$logFile}\n";
+echo "Log disimpan di: {$logFile}\n";
