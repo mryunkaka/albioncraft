@@ -94,6 +94,14 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - sample refining
     - sample potion + city bonus
     - sample equipment + NON_RETURN material
+    - auto harga material/item dari `market_prices` user (city first, fallback global)
+- Integration test end-to-end recipe auto-fill -> calculate -> save history sudah ditambahkan:
+  - `tests/run_recipe_autofill_e2e_tests.php`
+  - mencakup:
+    - auto-fill recipe potion sample dengan harga user
+    - kalkulasi dari payload hasil auto-fill
+    - penyimpanan `calculation_histories`
+    - verifikasi dashboard summary / latest history
 - Bootstrap autoload minimal sudah ada di `bootstrap/autoload.php`.
 - Skeleton web minimal sudah ada:
   - `public/index.php` dan `bootstrap/app.php`
@@ -244,8 +252,8 @@ php tests/run_calculation_engine_tests.php
 - Opsi tambahan: `INGAME_PER_CRAFT` untuk rounding lebih granular. Ini lebih dekat ke in-game, tetapi tidak dijamin 100% identik untuk semua situasi.
 
 ## Next Safe Continuation Point
-1. Tambahkan integrasi auto harga dari `market_prices` user ke recipe auto-fill untuk plan `MEDIUM/PRO`.
-2. Tambahkan bulk import/update harga yang lebih efisien untuk user PRO.
+1. Tambahkan bulk import/update harga yang lebih efisien untuk user PRO.
+2. QA manual UI untuk alur `recipe auto-fill` + `market_prices` user.
 3. Hardening Auth lanjutan:
    - rapikan UX flash error
    - pertimbangkan throttling endpoint API sensitif non-auth

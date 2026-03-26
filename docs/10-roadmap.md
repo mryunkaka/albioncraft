@@ -89,6 +89,7 @@
   - integration test market price service: `tests/run_market_price_service_tests.php` (PASS)
   - integration test dashboard history: `tests/run_dashboard_history_tests.php` (PASS)
   - integration test recipe auto-fill: `tests/run_recipe_autofill_tests.php` (PASS)
+  - integration test end-to-end recipe auto-fill -> calculate -> save history: `tests/run_recipe_autofill_e2e_tests.php` (PASS)
 
 ## Fase 10: Hardening
 - Optimasi query dan indexing.
@@ -101,6 +102,5 @@
 - Status saat ini tambahan: patch index hardening sudah tersedia di `docs/15-sql-index-hardening.sql` dan baseline schema sudah diperbarui.
 
 ## Next Priority
-- Integrasi auto harga dari `market_prices` user ke calculator `MEDIUM/PRO`
 - Bulk import/update harga lebih efisien untuk plan PRO
-- Test end-to-end autofill recipe -> calculate -> save history
+- QA manual UI untuk alur `recipe auto-fill` + `market_prices` user
