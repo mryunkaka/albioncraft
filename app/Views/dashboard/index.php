@@ -28,6 +28,7 @@
       <div class="actions dashboard-actions">
         <a class="button button-secondary" href="/calculator">Buka Calculator</a>
         <form action="/logout" method="post">
+          <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
           <button class="button button-primary" type="submit">Logout</button>
         </form>
       </div>
@@ -35,4 +36,3 @@
   </main>
 </body>
 </html>
-

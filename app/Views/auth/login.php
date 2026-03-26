@@ -25,6 +25,7 @@
       <?php endif; ?>
 
       <form method="post" action="/login" class="form">
+        <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
         <div class="grid auth-grid">
           <label class="field">
             <span class="field-label">Email</span>

@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\CalculationEngineService;
 use App\Support\CalculationException;
+use App\Support\Csrf;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -17,6 +18,7 @@ final class CalculatorController
     {
         Response::html(View::render('calculator/index', [
             'auth' => Session::get('auth'),
+            'csrf_token' => Csrf::token(),
         ]));
     }
 

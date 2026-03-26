@@ -69,6 +69,11 @@ Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/
   - `app/Views/auth/register.php`
   - `app/Views/dashboard/index.php`
   - route baru: `/login`, `/register`, `/logout`, `/dashboard`
+- Auth hardening tahap awal sudah diimplementasikan:
+  - middleware: `AuthMiddleware`, `GuestMiddleware`, `CsrfMiddleware`
+  - router sudah support route-level middleware
+  - form `login/register/logout` sudah memakai CSRF token
+  - fallback runtime error view untuk kasus konfigurasi DB belum siap: `app/Views/errors/runtime.php`
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -117,9 +122,9 @@ php tests/run_calculation_engine_tests.php
 1. Lanjutkan bootstrap aplikasi PHP Native penuh sesuai `docs/03-project-structure.md`.
 2. Implementasikan schema database dari `docs/05-sql-schema.sql`.
 3. Hardening Auth:
-   - tambah middleware `AuthMiddleware`/`GuestMiddleware`
-   - tambah CSRF token untuk form auth
-   - tambah fallback error view saat DB belum terkonfigurasi
+   - tambah middleware `SubscriptionMiddleware` dan `PlanFeatureMiddleware`
+   - tambah validasi/refactor flow flash error UX
+   - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`.
 5. Tambahkan Tailwind build pipeline (NPM) dan pindahkan styling ke `assets/components/` (tanpa CDN).
 6. Tambahkan halaman Subscription, Referral, dan PRO Price Data.

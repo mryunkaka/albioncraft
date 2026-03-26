@@ -22,6 +22,7 @@
       <?php endif; ?>
 
       <form method="post" action="/register" class="form">
+        <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
         <div class="grid auth-grid">
           <label class="field">
             <span class="field-label">Username</span>
@@ -63,4 +64,3 @@
   </main>
 </body>
 </html>
-

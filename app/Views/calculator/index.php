@@ -17,6 +17,7 @@
         <?php if (is_array($auth ?? null)): ?>
           <a class="button button-secondary" href="/dashboard">Dashboard</a>
           <form method="post" action="/logout">
+            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
             <button class="button button-ghost" type="submit">Logout</button>
           </form>
         <?php else: ?>

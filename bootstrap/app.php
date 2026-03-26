@@ -28,11 +28,26 @@ $router = new Router();
 $router->get('/', [App\Controllers\CalculatorController::class, 'index']);
 $router->get('/calculator', [App\Controllers\CalculatorController::class, 'index']);
 $router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'calculate']);
-$router->get('/login', [App\Controllers\AuthController::class, 'showLogin']);
-$router->post('/login', [App\Controllers\AuthController::class, 'login']);
-$router->get('/register', [App\Controllers\AuthController::class, 'showRegister']);
-$router->post('/register', [App\Controllers\AuthController::class, 'register']);
-$router->post('/logout', [App\Controllers\AuthController::class, 'logout']);
-$router->get('/dashboard', [App\Controllers\DashboardController::class, 'index']);
+$router->get('/login', [App\Controllers\AuthController::class, 'showLogin'], [
+    App\Middleware\GuestMiddleware::class,
+]);
+$router->post('/login', [App\Controllers\AuthController::class, 'login'], [
+    App\Middleware\GuestMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->get('/register', [App\Controllers\AuthController::class, 'showRegister'], [
+    App\Middleware\GuestMiddleware::class,
+]);
+$router->post('/register', [App\Controllers\AuthController::class, 'register'], [
+    App\Middleware\GuestMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/logout', [App\Controllers\AuthController::class, 'logout'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->get('/dashboard', [App\Controllers\DashboardController::class, 'index'], [
+    App\Middleware\AuthMiddleware::class,
+]);
 
 return $router;

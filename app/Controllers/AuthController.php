@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use App\Support\Csrf;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -24,6 +25,7 @@ final class AuthController
             'flash_success' => Session::pullFlash('success'),
             'errors' => Session::get('_old_errors', []),
             'old' => Session::get('_old_input', []),
+            'csrf_token' => Csrf::token(),
         ]));
         Session::forget('_old_errors');
         Session::forget('_old_input');
@@ -34,9 +36,10 @@ final class AuthController
         try {
             $service = new AuthService();
         } catch (\Throwable $e) {
-            Session::put('_old_errors', ['auth' => $e->getMessage()]);
-            Session::put('_old_input', ['email' => (string) $request->input('email', '')]);
-            Response::redirect('/login');
+            Response::html(View::render('errors/runtime', [
+                'title' => 'Konfigurasi Belum Siap',
+                'message' => $e->getMessage(),
+            ]), 500);
             return;
         }
         $result = $service->login($request->post());
@@ -64,6 +67,7 @@ final class AuthController
             'flash_success' => Session::pullFlash('success'),
             'errors' => Session::get('_old_errors', []),
             'old' => Session::get('_old_input', []),
+            'csrf_token' => Csrf::token(),
         ]));
         Session::forget('_old_errors');
         Session::forget('_old_input');
@@ -74,9 +78,10 @@ final class AuthController
         try {
             $service = new AuthService();
         } catch (\Throwable $e) {
-            Session::put('_old_errors', ['auth' => $e->getMessage()]);
-            Session::put('_old_input', $request->post());
-            Response::redirect('/register');
+            Response::html(View::render('errors/runtime', [
+                'title' => 'Konfigurasi Belum Siap',
+                'message' => $e->getMessage(),
+            ]), 500);
             return;
         }
         $result = $service->register($request->post());
