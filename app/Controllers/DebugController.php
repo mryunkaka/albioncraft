@@ -23,6 +23,9 @@ final class DebugController
         $plans = new PlanRepository($db);
 
         $currentDb = (string) ($db->query('SELECT DATABASE()')->fetchColumn() ?: '');
+        $currentUser = (string) ($db->query('SELECT CURRENT_USER()')->fetchColumn() ?: '');
+        $serverHost = (string) ($db->query('SELECT @@hostname')->fetchColumn() ?: '');
+        $serverPort = (string) ($db->query('SELECT @@port')->fetchColumn() ?: '');
         $plansCount = (int) ($db->query('SELECT COUNT(*) FROM plans')->fetchColumn() ?: 0);
         $freeIdRaw = $plans->findIdByCode('FREE');
         $firstPlanId = $plans->findFirstPlanId();
@@ -31,6 +34,9 @@ final class DebugController
             'APP_DEBUG=' . Env::get('APP_DEBUG', '0'),
             'ENV_DB_NAME=' . Env::get('DB_NAME', ''),
             'PDO_DATABASE()=' . $currentDb,
+            'PDO_CURRENT_USER()=' . $currentUser,
+            'MYSQL_HOSTNAME=' . $serverHost,
+            'MYSQL_PORT=' . $serverPort,
             'PLANS_COUNT=' . $plansCount,
             'FREE_ID=' . ($freeIdRaw === null ? 'NULL' : (string) $freeIdRaw),
             'FIRST_PLAN_ID=' . ($firstPlanId === null ? 'NULL' : (string) $firstPlanId),
@@ -39,4 +45,3 @@ final class DebugController
         Response::html('<pre>' . htmlspecialchars(implode("\n", $lines), ENT_QUOTES, 'UTF-8') . '</pre>');
     }
 }
-

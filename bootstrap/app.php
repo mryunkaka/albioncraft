@@ -134,5 +134,6 @@ $router->post('/admin/subscription-requests/reject', [App\Controllers\AdminSubsc
     App\Middleware\CsrfMiddleware::class,
 ]);
 $router->get('/debug-db', [App\Controllers\DebugController::class, 'db']);
+$router->get('/setup/seed', [App\Controllers\SetupController::class, 'seed']);
 
 return $router;
