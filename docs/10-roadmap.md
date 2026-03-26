@@ -73,6 +73,7 @@
 - Status saat ini:
   - CRUD dasar + AJAX list/filter/pagination sudah selesai
   - bulk update/import massal masih menjadi next step
+  - auto-fill recipe database di calculator sudah selesai untuk `MEDIUM/PRO`
 
 ## Fase 9: QA dan Validasi
 - Uji sample refining.
@@ -87,6 +88,7 @@
   - integration test subscription/referral/admin approval: `tests/run_subscription_referral_admin_tests.php` (PASS)
   - integration test market price service: `tests/run_market_price_service_tests.php` (PASS)
   - integration test dashboard history: `tests/run_dashboard_history_tests.php` (PASS)
+  - integration test recipe auto-fill: `tests/run_recipe_autofill_tests.php` (PASS)
 
 ## Fase 10: Hardening
 - Optimasi query dan indexing.
@@ -97,3 +99,8 @@
 - Status saat ini: rate limit auth sederhana sudah aktif untuk endpoint `POST /login` dan `POST /register`.
 - Status saat ini tambahan: endpoint utilitas `/debug-db` dan `/setup/seed` hanya aktif saat `APP_DEBUG=1`.
 - Status saat ini tambahan: patch index hardening sudah tersedia di `docs/15-sql-index-hardening.sql` dan baseline schema sudah diperbarui.
+
+## Next Priority
+- Integrasi auto harga dari `market_prices` user ke calculator `MEDIUM/PRO`
+- Bulk import/update harga lebih efisien untuk plan PRO
+- Test end-to-end autofill recipe -> calculate -> save history

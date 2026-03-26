@@ -15,6 +15,9 @@
   const sidebarBackdrop = document.getElementById("sidebar-backdrop");
   const toggleSidebarBtn = document.getElementById("toggle-sidebar");
   const closeSidebarBtn = document.getElementById("close-sidebar");
+  const recipeItemSelect = document.getElementById("recipe-item-select");
+  const recipeCitySelect = document.getElementById("recipe-city-select");
+  const recipeAutoFillBtn = document.getElementById("recipe-autofill-btn");
 
   function el(tag, className, attrs) {
     const node = document.createElement(tag);
@@ -103,6 +106,74 @@
   function readInt(fd, key) {
     const n = readNumber(fd, key);
     return Number.isFinite(n) ? Math.trunc(n) : 0;
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    const json = await res.json().catch(() => null);
+    if (!json || json.success !== true) {
+      const msg = (json && json.message) ? json.message : "Request gagal.";
+      throw new Error(msg);
+    }
+    return json;
+  }
+
+  function setFieldValue(name, value) {
+    const field = form.querySelector(`[name="${CSS.escape(name)}"]`);
+    if (!field) return;
+    field.value = value == null ? "" : String(value);
+  }
+
+  function populateRecipeDetail(data) {
+    if (!data || typeof data !== "object") return;
+
+    const item = data.item || {};
+    const cityBonus = data.city_bonus || {};
+    const materials = Array.isArray(data.materials) ? data.materials : [];
+
+    setFieldValue("item_id", item.id || "");
+    setFieldValue("item_name", item.name || "");
+    setFieldValue("item_value", item.item_value != null ? item.item_value : 0);
+    setFieldValue("output_qty", item.output_qty != null ? item.output_qty : 1);
+    setFieldValue("bonus_local", cityBonus.bonus_percent != null ? cityBonus.bonus_percent : 0);
+
+    clearMaterials();
+    if (materials.length === 0) {
+      addMaterialRow();
+    } else {
+      for (const material of materials) {
+        addMaterialRow({
+          name: material.name || "",
+          qty_per_recipe: material.qty_per_recipe != null ? material.qty_per_recipe : 0,
+          buy_price: material.buy_price != null ? material.buy_price : 0,
+          return_type: material.return_type || "RETURN",
+        });
+      }
+    }
+    reindexMaterialNames();
+    scheduleSave();
+  }
+
+  async function loadRecipeItems(keyword) {
+    if (!recipeItemSelect) return;
+    const q = keyword ? `?q=${encodeURIComponent(keyword)}` : "";
+    const json = await fetchJson(`/api/calculator/recipes/items${q}`);
+    const current = recipeItemSelect.value;
+
+    recipeItemSelect.innerHTML = "";
+    recipeItemSelect.appendChild(new Option("Pilih item recipe database", ""));
+
+    const rows = Array.isArray(json.data) ? json.data : [];
+    for (const row of rows) {
+      const label = `${row.name} (${row.item_code})`;
+      recipeItemSelect.appendChild(new Option(label, String(row.id)));
+    }
+
+    if (current) {
+      recipeItemSelect.value = current;
+    }
   }
 
   function setError(msg) {
@@ -397,12 +468,42 @@
     clearBtn.addEventListener("click", () => {
       try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
       form.reset();
+      setFieldValue("item_id", "");
       defaultMaterials();
       setError("");
       // Ensure required numeric field stays at HTML default after reset.
       const t = form.querySelector('[name="target_output_qty"]');
       if (t && (!t.value || String(t.value).trim() === "")) t.value = "100";
       scheduleSave();
+    });
+  }
+
+  if (recipeItemSelect) {
+    loadRecipeItems("").catch(() => {});
+  }
+
+  if (recipeAutoFillBtn) {
+    recipeAutoFillBtn.addEventListener("click", async () => {
+      setError("");
+
+      const itemId = recipeItemSelect ? Number(recipeItemSelect.value || "0") : 0;
+      const cityId = recipeCitySelect ? Number(recipeCitySelect.value || "0") : 0;
+      if (!itemId) {
+        setError("Pilih item recipe database terlebih dahulu.");
+        return;
+      }
+
+      recipeAutoFillBtn.disabled = true;
+      try {
+        const qs = new URLSearchParams({ item_id: String(itemId) });
+        if (cityId > 0) qs.set("city_id", String(cityId));
+        const json = await fetchJson(`/api/calculator/recipes/detail?${qs.toString()}`);
+        populateRecipeDetail(json.data || null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal load recipe.");
+      } finally {
+        recipeAutoFillBtn.disabled = false;
+      }
     });
   }
 

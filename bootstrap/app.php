@@ -53,6 +53,16 @@ $router = new Router();
 $router->get('/', [App\Controllers\CalculatorController::class, 'index']);
 $router->get('/calculator', [App\Controllers\CalculatorController::class, 'index']);
 $router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'calculate']);
+$router->get('/api/calculator/recipes/items', [App\Controllers\CalculatorController::class, 'recipeItems'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+]);
+$router->get('/api/calculator/recipes/detail', [App\Controllers\CalculatorController::class, 'recipeDetail'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+]);
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin'], [
     App\Middleware\GuestMiddleware::class,
 ]);

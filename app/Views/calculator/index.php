@@ -97,6 +97,33 @@
             <h2 class="card-title">Input Parameters</h2>
 
             <form id="calc-form" class="form">
+              <input type="hidden" name="item_id" value="">
+
+              <?php if (($recipe_auto_fill_enabled ?? false) === true): ?>
+              <div class="card-subtitle">Recipe Auto Fill (MEDIUM / PRO)</div>
+              <div class="grid">
+                <label class="field xl:col-span-2">
+                  <span class="field-label">Database Recipe Item</span>
+                  <select class="select" id="recipe-item-select" name="recipe_item_id">
+                    <option value="">Pilih item recipe database</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field-label">Kota Bonus</span>
+                  <select class="select" id="recipe-city-select" name="recipe_city_id">
+                    <option value="">Tanpa bonus kota</option>
+                    <?php foreach (($recipe_cities ?? []) as $city): ?>
+                      <option value="<?= (int) ($city['id'] ?? 0) ?>"><?= htmlspecialchars((string) ($city['name'] ?? '')) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </label>
+                <div class="field justify-end">
+                  <span class="field-label">Auto Fill</span>
+                  <button class="button button-secondary" type="button" id="recipe-autofill-btn">Load Recipe</button>
+                </div>
+              </div>
+              <?php endif; ?>
+
               <div class="grid">
                 <label class="field xl:col-span-2">
                   <span class="field-label">Nama Item (Optional)</span>

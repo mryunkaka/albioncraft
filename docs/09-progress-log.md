@@ -77,6 +77,23 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - simpan histori kalkulasi
     - ringkasan dashboard dari histori
     - latest/recent rows
+- Recipe auto-fill database untuk calculator sudah ditambahkan:
+  - repository baru: `RecipeRepository`
+  - service baru: `RecipeAutoFillService`
+  - endpoint baru:
+    - `GET /api/calculator/recipes/items`
+    - `GET /api/calculator/recipes/detail`
+  - feature gate: `recipe_auto_fill`
+  - UI calculator untuk plan `MEDIUM/PRO` sekarang bisa:
+    - pilih item recipe database
+    - pilih kota bonus
+    - auto-fill `item_name`, `item_value`, `output_qty`, `bonus_local`, dan materials
+- Integration test recipe auto-fill sudah ditambahkan:
+  - `tests/run_recipe_autofill_tests.php`
+  - mencakup:
+    - sample refining
+    - sample potion + city bonus
+    - sample equipment + NON_RETURN material
 - Bootstrap autoload minimal sudah ada di `bootstrap/autoload.php`.
 - Skeleton web minimal sudah ada:
   - `public/index.php` dan `bootstrap/app.php`
@@ -227,7 +244,7 @@ php tests/run_calculation_engine_tests.php
 - Opsi tambahan: `INGAME_PER_CRAFT` untuk rounding lebih granular. Ini lebih dekat ke in-game, tetapi tidak dijamin 100% identik untuk semua situasi.
 
 ## Next Safe Continuation Point
-1. Tambahkan preset/auto-fill recipe database untuk plan MEDIUM/PRO di calculator.
+1. Tambahkan integrasi auto harga dari `market_prices` user ke recipe auto-fill untuk plan `MEDIUM/PRO`.
 2. Tambahkan bulk import/update harga yang lebih efisien untuk user PRO.
 3. Hardening Auth lanjutan:
    - rapikan UX flash error

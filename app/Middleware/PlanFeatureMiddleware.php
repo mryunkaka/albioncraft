@@ -16,6 +16,8 @@ final class PlanFeatureMiddleware implements MiddlewareInterface
      */
     private const FEATURE_BY_PATH = [
         '/price-data' => 'price_bulk_input',
+        '/api/calculator/recipes/items' => 'recipe_auto_fill',
+        '/api/calculator/recipes/detail' => 'recipe_auto_fill',
     ];
 
     public function handle(Request $request): bool
@@ -43,4 +45,3 @@ final class PlanFeatureMiddleware implements MiddlewareInterface
         return false;
     }
 }
-
