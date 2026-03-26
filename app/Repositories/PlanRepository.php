@@ -47,4 +47,14 @@ final class PlanRepository
         $value = $stmt->fetchColumn();
         return (int) $value === 1;
     }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listAll(): array
+    {
+        $stmt = $this->db->query('SELECT * FROM plans ORDER BY sort_order ASC, id ASC');
+        $rows = $stmt->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
 }

@@ -12,6 +12,8 @@
       <div class="header-inner">
         <div class="mobile-brand">AlbionCraft</div>
         <div class="header-actions">
+          <a class="button button-ghost" href="/subscription">Subscription</a>
+          <a class="button button-ghost" href="/referral">Referral</a>
           <a class="button button-ghost" href="/price-data">Data Harga</a>
           <a class="button button-secondary" href="/calculator">Calculator</a>
           <form action="/logout" method="post">

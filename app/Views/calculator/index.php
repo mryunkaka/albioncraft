@@ -21,6 +21,9 @@
         <a class="nav-link active" href="/calculator">Calculator</a>
         <?php if (is_array($auth ?? null)): ?>
           <a class="nav-link" href="/dashboard">Dashboard</a>
+          <a class="nav-link" href="/subscription">Subscription</a>
+          <a class="nav-link" href="/referral">Referral</a>
+          <a class="nav-link" href="/price-data">Data Harga (PRO)</a>
         <?php else: ?>
           <a class="nav-link" href="/login">Login</a>
           <a class="nav-link" href="/register">Register</a>

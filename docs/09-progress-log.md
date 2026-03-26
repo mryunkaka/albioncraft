@@ -81,6 +81,14 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - session auth sekarang menyimpan: `plan_code`, `plan_name`, `plan_expired_at`
   - route protected baru: `/price-data` (feature key: `price_bulk_input`)
   - controller/view placeholder PRO: `PriceDataController` + `app/Views/price-data/index.php`
+- Subscription + Referral foundation (fase 3 awal) sudah masuk:
+  - repository baru: `SubscriptionRepository`, `ReferralRepository`
+  - service baru: `ReferralService`
+  - halaman baru: `/subscription`, `/referral`
+  - route post baru: `/subscription/request` (CSRF-protected)
+  - register dengan referral code sekarang membuat relasi referral + reward ledger
+  - reward referral otomatis memanggil extend hari subscription pada referrer
+  - mode extend berbayar tetap `manual admin` (request disimpan di `admin_subscription_actions`)
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -138,10 +146,10 @@ php tests/run_calculation_engine_tests.php
 3. Hardening Auth lanjutan:
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
-4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`:
-   - `SubscriptionService` (extend/create/auto-downgrade log)
-   - `ReferralService` (create relation + reward days)
-   - repository `subscriptions`, `subscription_logs`, `referrals`, `referral_rewards`
-5. Implementasi halaman Subscription & Referral (UI + endpoint).
+4. Lengkapi flow admin untuk subscription:
+   - endpoint/admin tool untuk approve request `REQUEST_EXTEND`
+   - tulis `subscriptions` + `subscription_logs` secara konsisten saat approval
+5. Tambahkan halaman dan endpoint manajemen request extend (admin-side minimal).
 6. Lanjutkan halaman PRO Price Data dari placeholder ke CRUD + pagination + search.
-7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+7. Tambahkan automated test untuk flow subscription/referral dasar.
+8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

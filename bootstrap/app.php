@@ -50,6 +50,19 @@ $router->get('/dashboard', [App\Controllers\DashboardController::class, 'index']
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,
 ]);
+$router->get('/subscription', [App\Controllers\SubscriptionController::class, 'index'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+]);
+$router->post('/subscription/request', [App\Controllers\SubscriptionController::class, 'requestExtend'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->get('/referral', [App\Controllers\ReferralController::class, 'index'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+]);
 $router->get('/price-data', [App\Controllers\PriceDataController::class, 'index'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,

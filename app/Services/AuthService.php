@@ -80,6 +80,11 @@ final class AuthService
             'status' => 'ACTIVE',
         ]);
 
+        if ($referredByCode !== '') {
+            $referralService = new ReferralService();
+            $referralService->processRegistrationReferral($id, $referredByCode);
+        }
+
         return ['ok' => true, 'errors' => [], 'user_id' => $id];
     }
 
