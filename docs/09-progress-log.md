@@ -60,6 +60,15 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - request extend -> approve admin
     - request extend -> reject admin
     - auto-downgrade FREE saat expired
+- Integration test market price service sudah ditambahkan:
+  - `tests/run_market_price_service_tests.php`
+  - mencakup:
+    - validation gagal (item tidak valid)
+    - upsert insert/update by unique key
+    - update by id
+    - filter/search/pagination list
+    - ownership check delete
+    - item options + city options
 - Bootstrap autoload minimal sudah ada di `bootstrap/autoload.php`.
 - Skeleton web minimal sudah ada:
   - `public/index.php` dan `bootstrap/app.php`
@@ -199,6 +208,6 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan automated test untuk market price service.
-6. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
-7. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).
+5. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+6. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).
+7. Rapikan endpoint debug/setup agar hanya aktif saat APP_DEBUG=1.

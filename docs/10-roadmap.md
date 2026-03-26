@@ -79,6 +79,7 @@
 - Status saat ini:
   - golden test calculator strict: `tests/run_calculation_engine_tests.php` (PASS)
   - integration test subscription/referral/admin approval: `tests/run_subscription_referral_admin_tests.php` (PASS)
+  - integration test market price service: `tests/run_market_price_service_tests.php` (PASS)
 
 ## Fase 10: Hardening
 - Optimasi query dan indexing.
