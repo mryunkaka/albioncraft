@@ -37,6 +37,10 @@ Script deploy ada di 2 lokasi (sudah disiapkan di repo):
 - CLI/Cron (utama): `/home/hark8423/public_html/albioncraft/deploy-albion.php`
 - Web trigger (opsional): `/home/hark8423/public_html/albioncraft/public/deploy-albion.php`
 
+Alternatif paling sederhana (cron only, tanpa token):
+- `/home/hark8423/public_html/deploy-cron.php`
+- Script ini hanya boleh jalan via CLI, jika dibuka via browser akan 403.
+
 ### Token Untuk Manual (Wajib)
 Agar script tidak bisa dieksekusi sembarang orang dari browser, manual deploy wajib token.
 
@@ -58,6 +62,20 @@ Contoh (tiap 5 menit):
 ```text
 */5 * * * * /usr/bin/php /home/hark8423/public_html/albioncraft/deploy-albion.php
 ```
+
+Jika Anda memakai script sederhana `deploy-cron.php`:
+```text
+*/5 * * * * /usr/bin/php -q /home/hark8423/public_html/deploy-cron.php
+```
+
+## 3.1 Error Umum Cron: "Permission denied"
+Jika log cron menampilkan:
+`/usr/local/cpanel/bin/jailshell: ... deploy-albion.php: Permission denied`
+biasanya karena cron mencoba mengeksekusi file `.php` langsung tanpa interpreter PHP.
+
+Yang benar:
+- Pakai `php /path/script.php` (contoh di atas).
+- Permission file script cukup `644` (tidak perlu executable).
 
 Log deploy:
 - `/home/hark8423/git-deploy-albion.log`
