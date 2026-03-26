@@ -36,6 +36,10 @@ Rekomendasi lokasi di hosting:
 Script ini akan melakukan `git pull` untuk repo yang ada di:
 - `/home/hark8423/public_html/albioncraft`
 
+Catatan:
+- File `deploy-albion.php` ini disarankan diletakkan di `public_html/` (di luar folder repo) agar mudah dipanggil cron.
+- Isi script tetap mengarah ke repo folder `albioncraft`.
+
 ### Cron
 Rekomendasi interval:
 - tiap 5 sampai 15 menit (lebih aman untuk shared hosting)
@@ -53,6 +57,10 @@ Bukan URL dan tidak memakai query string seperti `?token=...`.
 
 Log deploy:
 - `/home/hark8423/git-deploy-albion.log`
+
+Format log:
+- Selalu 1 baris `RUN: old -> new | pull=...`
+- Jika ada perubahan commit, ada baris `Deploy <hash> | <author> | <message>` per commit
 
 ## 4. Jika Deploy Gagal (Umum di Shared Hosting)
 Penyebab paling sering:

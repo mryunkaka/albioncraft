@@ -7,6 +7,11 @@
 - Siapkan config database dan env.
 - Siapkan helper response, validator, session, csrf.
 
+## Fase 1.1: Deploy Shared Hosting (cPanel)
+- Set document root domain ke folder `public/`.
+- Pastikan `.htaccess` bisa dibaca server (permission 644) dan folder 755.
+- Siapkan deploy script sederhana + cron (lihat `docs/13-deployment-cpanel.md`).
+
 ## Fase 2: Auth
 - Register user.
 - Generate referral code unik.

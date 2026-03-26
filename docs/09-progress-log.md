@@ -23,7 +23,7 @@ Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum
 | 10-roadmap.md | done | Roadmap implementasi selesai |
 | 11-calculation-engine-strict-rules.md | done | Rules strict tersinkron dengan spreadsheet basis |
 | 12-test-case-golden-data.md | done | Golden data numerik tersinkron dengan strict rules |
-| 13-deployment-cpanel.md | done | Panduan deploy cPanel + cron + token |
+| 13-deployment-cpanel.md | done | Panduan deploy cPanel + cron (deploy script sederhana) |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
@@ -72,6 +72,13 @@ Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum
   - Tabel summary 1 baris (spreadsheet-like) + detail perhitungan via collapsible
   - Material list to buy bernomor + badge profit merah/hijau
 - Belum ada auth, subscription, referral, database repository layer, dan UI Tailwind build pipeline.
+- Deploy shared hosting (cPanel) sudah didokumentasikan di `docs/13`.
+- Deploy script yang dipakai adalah versi sederhana (mirip `deploy-sigaji.php`) tanpa token/lock, dan log format 1 baris RUN + baris Deploy per commit.
+
+## Catatan Hosting (Penting)
+- Jika domain menampilkan 403 `Server unable to read htaccess file`, itu bukan masalah database atau PHP code.
+  - Itu masalah permission/ownership atau konfigurasi `.htaccess`/AllowOverride di Apache.
+  - Lihat troubleshooting di `docs/13-deployment-cpanel.md`.
 
 ## Cara Menjalankan (Dev)
 Jalankan web (PHP built-in server):
