@@ -17,16 +17,16 @@ final class PlanRepository
      */
     public function findByCode(string $code): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM plans WHERE code = :code LIMIT 1');
-        $stmt->execute(['code' => strtoupper($code)]);
+        $stmt = $this->db->prepare('SELECT * FROM plans WHERE TRIM(UPPER(code)) = :code LIMIT 1');
+        $stmt->execute(['code' => strtoupper(trim($code))]);
         $row = $stmt->fetch();
         return is_array($row) ? $row : null;
     }
 
     public function findIdByCode(string $code): ?int
     {
-        $stmt = $this->db->prepare('SELECT id FROM plans WHERE code = :code LIMIT 1');
-        $stmt->execute(['code' => strtoupper($code)]);
+        $stmt = $this->db->prepare('SELECT id FROM plans WHERE TRIM(UPPER(code)) = :code LIMIT 1');
+        $stmt->execute(['code' => strtoupper(trim($code))]);
         $value = $stmt->fetchColumn();
         if ($value === false) {
             return null;
