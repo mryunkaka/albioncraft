@@ -24,6 +24,7 @@ final class Database
         $user = Env::get('DB_USER', '');
         $pass = Env::get('DB_PASS', '');
         $charset = Env::get('DB_CHARSET', 'utf8mb4');
+        $emulatePrepares = Env::get('DB_EMULATE_PREPARES', '1') === '1';
 
         if ($name === '' || $user === '') {
             throw new RuntimeException('Database belum dikonfigurasi. Isi DB_NAME dan DB_USER di .env');
@@ -35,7 +36,7 @@ final class Database
             self::$connection = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_EMULATE_PREPARES => $emulatePrepares,
             ]);
         } catch (PDOException $e) {
             throw new RuntimeException('Koneksi database gagal: ' . $e->getMessage());
@@ -44,4 +45,3 @@ final class Database
         return self::$connection;
     }
 }
-

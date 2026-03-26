@@ -34,22 +34,36 @@ final class ReferralService
             return;
         }
 
+        if ($newUserId <= 0) {
+            return;
+        }
+
         $existing = $this->referrals->findByReferredUserId($newUserId);
         if ($existing !== null) {
             return;
         }
 
-        $referrer = $this->users->findByReferralCode($code);
-        if ($referrer === null) {
+        $referrerId = $this->users->findIdByReferralCode($code);
+        if ($referrerId === null || $referrerId <= 0 || $referrerId === $newUserId) {
+            return;
+        }
+
+        $referrer = $this->users->findById($referrerId);
+        $referred = $this->users->findById($newUserId);
+        if ($referrer === null || $referred === null) {
             return;
         }
 
         $referralId = $this->referrals->create([
-            'referrer_user_id' => (int) $referrer['id'],
+            'referrer_user_id' => $referrerId,
             'referred_user_id' => $newUserId,
             'referral_code_used' => $code,
             'status' => 'VALID',
         ]);
+
+        if ($referralId <= 0) {
+            return;
+        }
 
         $days = $this->rewardDays();
         $this->referrals->createReward([
@@ -92,4 +106,3 @@ final class ReferralService
         return $days > 0 ? $days : self::DEFAULT_REWARD_DAYS;
     }
 }
-

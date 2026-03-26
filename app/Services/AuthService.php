@@ -9,6 +9,7 @@ use App\Repositories\UserRepository;
 use App\Support\Database;
 use App\Support\Session;
 use RuntimeException;
+use Throwable;
 
 final class AuthService
 {
@@ -91,8 +92,12 @@ final class AuthService
         ]);
 
         if ($referredByCode !== '') {
-            $referralService = new ReferralService();
-            $referralService->processRegistrationReferral($id, $referredByCode);
+            try {
+                $referralService = new ReferralService();
+                $referralService->processRegistrationReferral($id, $referredByCode);
+            } catch (Throwable) {
+                // Jangan blokir register jika proses referral gagal di shared hosting.
+            }
         }
 
         return ['ok' => true, 'errors' => [], 'user_id' => $id];

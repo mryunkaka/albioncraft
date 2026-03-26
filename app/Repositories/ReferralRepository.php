@@ -27,14 +27,24 @@ final class ReferralRepository
     {
         $stmt = $this->db->prepare(
             'INSERT INTO referrals (referrer_user_id, referred_user_id, referral_code_used, status)
-             VALUES (:referrer_user_id, :referred_user_id, :referral_code_used, :status)'
+             SELECT :referrer_user_id, :referred_user_id, :referral_code_used, :status
+             FROM DUAL
+             WHERE EXISTS (SELECT 1 FROM users u1 WHERE u1.id = :referrer_exists)
+               AND EXISTS (SELECT 1 FROM users u2 WHERE u2.id = :referred_exists)'
         );
         $stmt->execute([
             'referrer_user_id' => $payload['referrer_user_id'],
             'referred_user_id' => $payload['referred_user_id'],
             'referral_code_used' => $payload['referral_code_used'],
             'status' => $payload['status'] ?? 'VALID',
+            'referrer_exists' => $payload['referrer_user_id'],
+            'referred_exists' => $payload['referred_user_id'],
         ]);
+
+        if ($stmt->rowCount() <= 0) {
+            return 0;
+        }
+
         return (int) $this->db->lastInsertId();
     }
 
@@ -76,4 +86,3 @@ final class ReferralRepository
         return is_array($rows) ? $rows : [];
     }
 }
-

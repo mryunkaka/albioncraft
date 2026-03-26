@@ -45,6 +45,19 @@ final class UserRepository
         return is_array($row) ? $row : null;
     }
 
+    public function findIdByReferralCode(string $referralCode): ?int
+    {
+        $stmt = $this->db->prepare('SELECT id FROM users WHERE referral_code = :code LIMIT 1');
+        $stmt->execute(['code' => strtoupper(trim($referralCode))]);
+        $value = $stmt->fetchColumn();
+        if ($value === false) {
+            return null;
+        }
+
+        $id = (int) $value;
+        return $id > 0 ? $id : null;
+    }
+
     /**
      * @return array<string, mixed>|null
      */
