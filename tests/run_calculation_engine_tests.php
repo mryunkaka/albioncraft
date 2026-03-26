@@ -200,6 +200,113 @@ $tests = [
             'srp_10' => 1318.82,
         ],
     ],
+    [
+        'name' => 'case8_no_sell_price_uses_srp10_scenario',
+        'input' => [
+            'bonus_basic' => 18,
+            'bonus_local' => 40,
+            'bonus_daily' => 0,
+            'craft_with_focus' => false,
+            'usage_fee' => 200,
+            'item_value' => 64,
+            'output_qty' => 1,
+            'target_output_qty' => 100,
+            'premium_status' => true,
+            'materials' => [
+                ['name' => 'Hide T3', 'qty_per_recipe' => 2, 'buy_price' => 100, 'return_type' => 'RETURN'],
+                ['name' => 'Leather T2', 'qty_per_recipe' => 1, 'buy_price' => 80, 'return_type' => 'RETURN'],
+            ],
+        ],
+        'expected' => [
+            'sell_price' => 0.00,
+            'revenue_per_item' => 0.00,
+            'profit_per_item' => 0.00,
+            'total_profit' => 0.00,
+            'margin_percent' => 0.00,
+            'scenario_mode' => 'SRP_10_DEFAULT',
+            'scenario_margin_percent' => 10.00,
+            'status' => 'PROFIT',
+            'status_level' => 'SEDANG',
+        ],
+    ],
+];
+
+$exceptionTests = [
+    [
+        'name' => 'invalid_focus_per_craft_when_focus_enabled',
+        'input' => [
+            'bonus_basic' => 18,
+            'bonus_local' => 0,
+            'bonus_daily' => 0,
+            'craft_with_focus' => true,
+            'focus_points' => 10000,
+            'focus_per_craft' => 0,
+            'usage_fee' => 100,
+            'item_value' => 50,
+            'output_qty' => 1,
+            'target_output_qty' => 10,
+            'premium_status' => true,
+            'materials' => [
+                ['name' => 'Material A', 'qty_per_recipe' => 1, 'buy_price' => 10, 'return_type' => 'RETURN'],
+            ],
+        ],
+        'expected_error_key' => 'focus_per_craft',
+    ],
+    [
+        'name' => 'invalid_materials_empty',
+        'input' => [
+            'bonus_basic' => 18,
+            'bonus_local' => 0,
+            'bonus_daily' => 0,
+            'craft_with_focus' => false,
+            'usage_fee' => 100,
+            'item_value' => 50,
+            'output_qty' => 1,
+            'target_output_qty' => 10,
+            'premium_status' => true,
+            'materials' => [],
+        ],
+        'expected_error_key' => 'materials',
+    ],
+    [
+        'name' => 'invalid_rounding_mode',
+        'input' => [
+            'bonus_basic' => 18,
+            'bonus_local' => 0,
+            'bonus_daily' => 0,
+            'craft_with_focus' => false,
+            'usage_fee' => 100,
+            'item_value' => 50,
+            'output_qty' => 1,
+            'target_output_qty' => 10,
+            'premium_status' => true,
+            'return_rounding_mode' => 'UNKNOWN_MODE',
+            'materials' => [
+                ['name' => 'Material A', 'qty_per_recipe' => 1, 'buy_price' => 10, 'return_type' => 'RETURN'],
+            ],
+        ],
+        'expected_error_key' => 'return_rounding_mode',
+    ],
+    [
+        'name' => 'invalid_focus_points_less_than_focus_per_craft',
+        'input' => [
+            'bonus_basic' => 18,
+            'bonus_local' => 0,
+            'bonus_daily' => 0,
+            'craft_with_focus' => true,
+            'focus_points' => 1000,
+            'focus_per_craft' => 5000,
+            'usage_fee' => 100,
+            'item_value' => 50,
+            'output_qty' => 1,
+            'target_output_qty' => 10,
+            'premium_status' => true,
+            'materials' => [
+                ['name' => 'Material A', 'qty_per_recipe' => 1, 'buy_price' => 10, 'return_type' => 'RETURN'],
+            ],
+        ],
+        'expected_error_key' => 'focus_points',
+    ],
 ];
 
 $failures = [];
@@ -220,7 +327,18 @@ foreach ($tests as $test) {
     }
 
     foreach ($test['expected'] as $field => $expectedValue) {
-        $actualValue = $result[$field] ?? null;
+        $actualValue = match ($field) {
+            'scenario_mode' => $result['scenario']['mode'] ?? null,
+            'scenario_margin_percent' => $result['scenario']['margin_percent'] ?? null,
+            default => $result[$field] ?? null,
+        };
+
+        if (is_string($expectedValue)) {
+            if ((string) $actualValue !== $expectedValue) {
+                $failures[] = sprintf('%s field %s expected %s got %s', $test['name'], $field, $expectedValue, (string) $actualValue);
+            }
+            continue;
+        }
 
         if (is_int($expectedValue)) {
             if ($actualValue !== $expectedValue) {
@@ -243,6 +361,26 @@ foreach ($tests as $test) {
                 $maxDeviation
             );
         }
+    }
+}
+
+foreach ($exceptionTests as $test) {
+    try {
+        $service->calculate($test['input']);
+        $failures[] = sprintf('%s expected exception but calculation succeeded', $test['name']);
+    } catch (CalculationException $exception) {
+        $errors = $exception->errors();
+        $expectedKey = (string) $test['expected_error_key'];
+        if (! array_key_exists($expectedKey, $errors)) {
+            $failures[] = sprintf(
+                '%s expected error key %s but got %s',
+                $test['name'],
+                $expectedKey,
+                json_encode(array_keys($errors))
+            );
+        }
+    } catch (Throwable $exception) {
+        $failures[] = sprintf('%s crashed unexpectedly: %s', $test['name'], $exception->getMessage());
     }
 }
 

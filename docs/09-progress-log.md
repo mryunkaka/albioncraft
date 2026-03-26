@@ -56,6 +56,12 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - Exception validasi ada di `app/Support/CalculationException.php`.
 - Test runner golden data ada di `tests/run_calculation_engine_tests.php`.
 - Semua golden tests saat ini PASS.
+- Golden test calculator strict sekarang juga mencakup edge case tambahan:
+  - `sell_price` kosong -> `scenario.mode = SRP_10_DEFAULT`
+  - validasi `focus_per_craft` invalid saat focus aktif
+  - validasi `materials` kosong
+  - validasi `return_rounding_mode` invalid
+  - validasi `focus_points < focus_per_craft`
 - Integration test flow subscription/referral/admin approval sudah ditambahkan:
   - `tests/run_subscription_referral_admin_tests.php`
   - mencakup:
