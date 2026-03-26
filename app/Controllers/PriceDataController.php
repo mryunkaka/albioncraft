@@ -116,4 +116,37 @@ final class PriceDataController
         $rows = $service->itemOptions($q);
         Response::json(['success' => true, 'data' => $rows]);
     }
+
+    public function bulkSave(Request $request): void
+    {
+        $auth = Session::get('auth');
+        if (! is_array($auth) || ! isset($auth['user_id'])) {
+            Response::redirect('/login');
+            return;
+        }
+
+        $service = new MarketPriceService();
+        $result = $service->bulkUpsertPrices((int) $auth['user_id'], $request->post());
+
+        if ($request->isAjax()) {
+            Response::json([
+                'success' => $result['ok'],
+                'message' => $result['message'],
+                'data' => [
+                    'created_count' => $result['created_count'] ?? 0,
+                    'updated_count' => $result['updated_count'] ?? 0,
+                    'error_count' => $result['error_count'] ?? 0,
+                    'errors' => $result['errors'] ?? [],
+                ],
+            ], $result['ok'] ? 200 : 422);
+            return;
+        }
+
+        if ($result['ok']) {
+            Session::flash('success', $result['message']);
+        } else {
+            Session::flash('error', $result['message']);
+        }
+        Response::redirect('/price-data');
+    }
 }

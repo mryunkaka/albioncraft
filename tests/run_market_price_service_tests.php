@@ -243,6 +243,38 @@ try {
     $cityOptions = $service->cityOptions();
     expectTrue(count($cityOptions) >= 1, 'cityOptions harus mengembalikan data.', $failures);
 
+    // Case 9: bulk import/update
+    $bulkRows = implode("\n", [
+        'item_code,city_code,price_type,price_value,observed_at,notes',
+        $itemCode1 . ',,BUY,1400,2026-03-27 09:00:00,bulk global update',
+        $itemCode2 . ',' . $cityCode . ',SELL,2500,2026-03-27 09:10:00,bulk city update',
+    ]);
+    $bulk = $service->bulkUpsertPrices($userAId, [
+        'bulk_rows' => $bulkRows,
+    ]);
+    expectTrue($bulk['ok'] === true, 'bulk import harus sukses.', $failures);
+    expectTrue((int) ($bulk['updated_count'] ?? 0) >= 1, 'bulk import harus mengupdate minimal 1 row existing.', $failures);
+
+    $bulkCheckStmt = $db->prepare(
+        'SELECT price_value, notes
+         FROM market_prices
+         WHERE user_id = :uid
+           AND item_id = :iid
+           AND city_id IS NULL
+           AND price_type = :pt
+         LIMIT 1'
+    );
+    $bulkCheckStmt->execute([
+        'uid' => $userAId,
+        'iid' => $item1Id,
+        'pt' => 'BUY',
+    ]);
+    $bulkRow = $bulkCheckStmt->fetch();
+    expectTrue(is_array($bulkRow), 'bulk update row global BUY tidak ditemukan.', $failures);
+    if (is_array($bulkRow)) {
+        expectTrue((float) $bulkRow['price_value'] === 1400.0, 'bulk update global BUY gagal mengubah price_value.', $failures);
+    }
+
     // Cleanup
     if ($created['users'] !== []) {
         $uidCsv = implode(',', array_map(static fn (int $v): string => (string) $v, $created['users']));

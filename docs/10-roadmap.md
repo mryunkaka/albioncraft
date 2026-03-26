@@ -72,7 +72,7 @@
 - Bulk update harga.
 - Status saat ini:
   - CRUD dasar + AJAX list/filter/pagination sudah selesai
-  - bulk update/import massal masih menjadi next step
+  - bulk update/import massal via textarea CSV/TSV sudah selesai
   - auto-fill recipe database di calculator sudah selesai untuk `MEDIUM/PRO`
 
 ## Fase 9: QA dan Validasi
@@ -102,5 +102,5 @@
 - Status saat ini tambahan: patch index hardening sudah tersedia di `docs/15-sql-index-hardening.sql` dan baseline schema sudah diperbarui.
 
 ## Next Priority
-- Bulk import/update harga lebih efisien untuk plan PRO
 - QA manual UI untuk alur `recipe auto-fill` + `market_prices` user
+- Hardening UX bulk import/update harga untuk user PRO

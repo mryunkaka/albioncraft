@@ -21,5 +21,14 @@ final class CityRepository
         $rows = $stmt->fetchAll();
         return is_array($rows) ? $rows : [];
     }
-}
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listAllForLookup(): array
+    {
+        $stmt = $this->db->query('SELECT id, code, name FROM cities ORDER BY name ASC');
+        $rows = $stmt->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
+}

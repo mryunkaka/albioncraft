@@ -8,6 +8,9 @@
   const nextBtn = document.getElementById("page-next");
   const pageInfo = document.getElementById("page-info");
   const form = document.getElementById("price-form");
+  const bulkForm = document.getElementById("bulk-price-form");
+  const bulkSaveBtn = document.getElementById("bulk-save-btn");
+  const bulkResult = document.getElementById("bulk-result");
   const saveBtn = document.getElementById("price-save-btn");
   const cancelEditBtn = document.getElementById("price-cancel-edit");
   const idInput = document.getElementById("price-id");
@@ -283,6 +286,51 @@
     cancelEditBtn.addEventListener("click", () => {
       if (form) form.reset();
       resetEditState();
+    });
+  }
+
+  if (bulkForm) {
+    bulkForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!bulkSaveBtn) return;
+
+      bulkSaveBtn.disabled = true;
+      const oldText = bulkSaveBtn.textContent;
+      bulkSaveBtn.textContent = "Memproses...";
+      if (bulkResult) bulkResult.textContent = "";
+
+      const fd = new FormData(bulkForm);
+      let res;
+      try {
+        res = await fetch("/price-data/bulk-save", {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body: fd,
+        });
+      } catch (_) {
+        if (bulkResult) bulkResult.textContent = "Gagal request bulk ke server.";
+        bulkSaveBtn.disabled = false;
+        bulkSaveBtn.textContent = oldText;
+        return;
+      }
+
+      const json = await res.json().catch(() => null);
+      if (!json || json.success !== true) {
+        const errors = json && json.data && Array.isArray(json.data.errors) ? json.data.errors : [];
+        if (bulkResult) {
+          bulkResult.textContent = ((json && json.message) || "Bulk gagal.") + (errors.length ? " " + errors.join(" | ") : "");
+        }
+      } else {
+        const data = json.data || {};
+        if (bulkResult) {
+          bulkResult.textContent = `${json.message || "Bulk selesai."} Errors: ${(data.error_count || 0)}.`;
+        }
+        bulkForm.reset();
+        loadRows();
+      }
+
+      bulkSaveBtn.disabled = false;
+      bulkSaveBtn.textContent = oldText;
     });
   }
 

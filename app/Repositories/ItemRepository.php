@@ -47,5 +47,18 @@ final class ItemRepository
         $rows = $stmt->fetchAll();
         return is_array($rows) ? $rows : [];
     }
-}
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listAllForLookup(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT id, item_code, name
+             FROM items
+             ORDER BY name ASC'
+        );
+        $rows = $stmt->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
+}

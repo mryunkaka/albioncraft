@@ -183,6 +183,13 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - delete: klik `Delete` pada row (AJAX + CSRF)
   - endpoint baru: `POST /price-data/delete`
   - backend update by `id` + ownership check (`user_id`)
+- PRO Price Data sekarang sudah punya bulk import/update dasar:
+  - endpoint baru: `POST /price-data/bulk-save`
+  - format input: paste CSV/TSV dari spreadsheet
+  - kolom: `item_code,item_city_or_blank,price_type,price_value,observed_at,notes`
+  - backend bulk upsert memprioritaskan update row existing berdasarkan unique key `(user_id, item_id, city_id, price_type)`
+  - lookup item/city mendukung code dan exact name
+  - response bulk menampilkan ringkasan created/updated/error
 - Histori kalkulasi + dashboard summary real sudah ditambahkan:
   - repository baru: `CalculationHistoryRepository`
   - service baru: `CalculationHistoryService`, `DashboardService`
@@ -252,8 +259,8 @@ php tests/run_calculation_engine_tests.php
 - Opsi tambahan: `INGAME_PER_CRAFT` untuk rounding lebih granular. Ini lebih dekat ke in-game, tetapi tidak dijamin 100% identik untuk semua situasi.
 
 ## Next Safe Continuation Point
-1. Tambahkan bulk import/update harga yang lebih efisien untuk user PRO.
-2. QA manual UI untuk alur `recipe auto-fill` + `market_prices` user.
+1. QA manual UI untuk alur `recipe auto-fill` + `market_prices` user.
+2. Hardening UX bulk import/update harga untuk user PRO.
 3. Hardening Auth lanjutan:
    - rapikan UX flash error
    - pertimbangkan throttling endpoint API sensitif non-auth

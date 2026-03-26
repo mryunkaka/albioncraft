@@ -102,6 +102,22 @@
       </section>
 
       <section class="card">
+        <h2 class="card-title">Bulk Import / Update</h2>
+        <p class="page-subtitle">Paste dari spreadsheet dengan format: `item_code,item_city_or_blank,price_type,price_value,observed_at,notes` atau versi tab/TSV.</p>
+        <form id="bulk-price-form" class="form" method="post" action="/price-data/bulk-save">
+          <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
+          <label class="field">
+            <span class="field-label">Data Bulk</span>
+            <textarea class="input" id="bulk-rows" name="bulk_rows" rows="10" placeholder="ITEM_CODE,CITY_CODE,BUY,1234,2026-03-27 11:00:00,optional notes&#10;TEASEL,,BUY,444,,global price&#10;T4_POTION_SAMPLE,BRECILIEN,SELL,1888,2026-03-27 11:05:00,city sell"></textarea>
+          </label>
+          <div class="actions">
+            <button class="button button-secondary" type="submit" id="bulk-save-btn">Proses Bulk</button>
+          </div>
+          <div id="bulk-result" class="text-sm text-slate-600"></div>
+        </form>
+      </section>
+
+      <section class="card">
         <h2 class="card-title">Filter & Table Harga</h2>
         <div class="form">
           <div class="grid">
