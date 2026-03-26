@@ -12,14 +12,39 @@ Env::load(dirname(__DIR__) . '/.env');
 Session::start();
 
 set_exception_handler(static function (Throwable $exception): void {
-    // Fallback error handler. For now, avoid leaking internals.
+    $root = dirname(__DIR__);
+    $debug = Env::get('APP_DEBUG', '0') === '1';
+    $logDir = $root . '/storage/logs';
+    $logFile = $logDir . '/app.log';
+
+    if (! is_dir($logDir)) {
+        @mkdir($logDir, 0755, true);
+    }
+
+    $line = sprintf(
+        "[%s] %s: %s in %s:%d\nStack: %s\n\n",
+        date('Y-m-d H:i:s'),
+        get_class($exception),
+        $exception->getMessage(),
+        $exception->getFile(),
+        $exception->getLine(),
+        $exception->getTraceAsString()
+    );
+    @file_put_contents($logFile, $line, FILE_APPEND);
+
     if (PHP_SAPI === 'cli') {
         throw $exception;
     }
 
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    echo 'Internal Server Error';
+    if ($debug) {
+        echo "Internal Server Error\n";
+        echo $exception->getMessage() . "\n";
+        echo $exception->getFile() . ':' . $exception->getLine() . "\n";
+    } else {
+        echo 'Internal Server Error';
+    }
 });
 
 $router = new Router();
