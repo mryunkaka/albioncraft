@@ -49,19 +49,30 @@ final class SetupController
              ON DUPLICATE KEY UPDATE is_enabled = VALUES(is_enabled)",
         ];
 
-        foreach ($queries as $sql) {
-            $db->exec($sql);
+        $execResults = [];
+        foreach ($queries as $idx => $sql) {
+            try {
+                $affected = $db->exec($sql);
+                $execResults[] = 'Q' . ($idx + 1) . '_AFFECTED=' . ($affected === false ? 'FALSE' : (string) $affected);
+            } catch (\Throwable $e) {
+                $execResults[] = 'Q' . ($idx + 1) . '_ERROR=' . $e->getMessage();
+            }
         }
 
         $currentDb = (string) ($db->query('SELECT DATABASE()')->fetchColumn() ?: '');
+        $currentUser = (string) ($db->query('SELECT CURRENT_USER()')->fetchColumn() ?: '');
         $plansCount = (int) ($db->query('SELECT COUNT(*) FROM plans')->fetchColumn() ?: 0);
         $freeId = $db->query("SELECT id FROM plans WHERE TRIM(UPPER(code))='FREE' LIMIT 1")->fetchColumn();
+        $plansCodes = (string) ($db->query("SELECT COALESCE(GROUP_CONCAT(code ORDER BY id SEPARATOR ','), '') FROM plans")->fetchColumn() ?: '');
 
         $out = [
             'SEED_STATUS=OK',
             'DATABASE=' . $currentDb,
+            'CURRENT_USER=' . $currentUser,
             'PLANS_COUNT=' . $plansCount,
             'FREE_ID=' . (($freeId === false || $freeId === null) ? 'NULL' : (string) $freeId),
+            'PLANS_CODES=' . $plansCodes,
+            ...$execResults,
             'NEXT=Try register again',
         ];
 
