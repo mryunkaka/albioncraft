@@ -115,6 +115,11 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - tabel data harga load via AJAX
     - debounce search/filter
     - pagination next/prev tanpa reload full page
+- PRO Price Data sekarang sudah ada aksi lanjutan:
+  - edit cepat: klik `Edit` pada row akan prefill form (mode update)
+  - delete: klik `Delete` pada row (AJAX + CSRF)
+  - endpoint baru: `POST /price-data/delete`
+  - backend update by `id` + ownership check (`user_id`)
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -173,8 +178,7 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan fitur edit cepat/inline update dan delete untuk market price.
-6. Tambahkan halaman khusus history admin action (opsional, read-only).
-7. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
-8. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
-9. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+5. Tambahkan halaman khusus history admin action (opsional, read-only).
+6. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
+7. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
+8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

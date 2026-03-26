@@ -9,6 +9,9 @@
   const pageInfo = document.getElementById("page-info");
   const form = document.getElementById("price-form");
   const saveBtn = document.getElementById("price-save-btn");
+  const cancelEditBtn = document.getElementById("price-cancel-edit");
+  const idInput = document.getElementById("price-id");
+  const itemSelect = document.getElementById("price-item-id");
 
   let page = 1;
   let lastPage = 1;
@@ -48,13 +51,13 @@
   function renderRows(rows) {
     if (!tableBody) return;
     if (!Array.isArray(rows) || rows.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\">Tidak ada data.</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan=\"10\">Tidak ada data.</td></tr>";
       return;
     }
 
     tableBody.innerHTML = rows
       .map((row) => `
-        <tr>
+        <tr data-row='${escapeHtml(JSON.stringify(row))}'>
           <td>${escapeHtml(row.id)}</td>
           <td>${escapeHtml(row.item_name)}</td>
           <td>${escapeHtml(row.item_code)}</td>
@@ -64,9 +67,116 @@
           <td>${escapeHtml(row.observed_at || "-")}</td>
           <td>${escapeHtml(row.updated_at || "-")}</td>
           <td>${escapeHtml(row.notes || "-")}</td>
+          <td>
+            <div class="flex gap-2">
+              <button class="button button-ghost js-edit" type="button">Edit</button>
+              <button class="button button-danger js-delete" type="button">Delete</button>
+            </div>
+          </td>
         </tr>
       `)
       .join("");
+
+    tableBody.querySelectorAll(".js-edit").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tr = btn.closest("tr");
+        if (!tr) return;
+        const raw = tr.getAttribute("data-row");
+        if (!raw) return;
+        let row;
+        try {
+          row = JSON.parse(raw);
+        } catch (_) {
+          return;
+        }
+        fillFormForEdit(row);
+      });
+    });
+
+    tableBody.querySelectorAll(".js-delete").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const tr = btn.closest("tr");
+        if (!tr) return;
+        const raw = tr.getAttribute("data-row");
+        if (!raw) return;
+        let row;
+        try {
+          row = JSON.parse(raw);
+        } catch (_) {
+          return;
+        }
+        await deleteRow(row);
+      });
+    });
+  }
+
+  function toDatetimeLocal(dbValue) {
+    if (!dbValue) return "";
+    const s = String(dbValue).trim();
+    if (s.length < 16) return "";
+    return s.slice(0, 16).replace(" ", "T");
+  }
+
+  function fillFormForEdit(row) {
+    if (!form || !row) return;
+    if (idInput) idInput.value = String(row.id || "");
+    if (itemSelect) itemSelect.value = String(row.item_id || "");
+
+    const cityInput = form.querySelector('[name="city_id"]');
+    if (cityInput) cityInput.value = row.city_id == null ? "" : String(row.city_id);
+
+    const typeInput = form.querySelector('[name="price_type"]');
+    if (typeInput) typeInput.value = String(row.price_type || "BUY");
+
+    const valueInput = form.querySelector('[name="price_value"]');
+    if (valueInput) valueInput.value = String(row.price_value || 0);
+
+    const observedInput = form.querySelector('[name="observed_at"]');
+    if (observedInput) observedInput.value = toDatetimeLocal(row.observed_at);
+
+    const notesInput = form.querySelector('[name="notes"]');
+    if (notesInput) notesInput.value = String(row.notes || "");
+
+    if (saveBtn) saveBtn.textContent = "Update Harga";
+    if (cancelEditBtn) cancelEditBtn.hidden = false;
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetEditState() {
+    if (idInput) idInput.value = "";
+    if (saveBtn) saveBtn.textContent = "Simpan Harga";
+    if (cancelEditBtn) cancelEditBtn.hidden = true;
+  }
+
+  async function deleteRow(row) {
+    if (!row || !row.id) return;
+    const ok = window.confirm(`Hapus data harga ID ${row.id}?`);
+    if (!ok) return;
+
+    const fd = new FormData();
+    fd.append("_token", (window.__PRICE_DATA__ && window.__PRICE_DATA__.csrfToken) || "");
+    fd.append("id", String(row.id));
+
+    let res;
+    try {
+      res = await fetch("/price-data/delete", {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: fd,
+      });
+    } catch (_) {
+      alert("Gagal request delete.");
+      return;
+    }
+
+    const json = await res.json().catch(() => null);
+    if (!json || json.success !== true) {
+      alert((json && json.message) || "Gagal hapus data.");
+      return;
+    }
+
+    alert(json.message || "Berhasil dihapus.");
+    loadRows();
   }
 
   async function loadRows() {
@@ -160,6 +270,7 @@
       } else {
         alert(json.message || "Berhasil disimpan.");
         form.reset();
+        resetEditState();
         loadRows();
       }
 
@@ -168,6 +279,12 @@
     });
   }
 
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener("click", () => {
+      if (form) form.reset();
+      resetEditState();
+    });
+  }
+
   loadRows();
 })();
-

@@ -172,5 +172,52 @@ final class MarketPriceRepository
             'notes' => $payload['notes'],
         ]);
     }
-}
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findByIdAndUser(int $id, int $userId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM market_prices WHERE id = :id AND user_id = :user_id LIMIT 1');
+        $stmt->execute([
+            'id' => $id,
+            'user_id' => $userId,
+        ]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    public function updateFull(int $id, int $userId, array $payload): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE market_prices
+             SET item_id = :item_id,
+                 city_id = :city_id,
+                 price_type = :price_type,
+                 price_value = :price_value,
+                 observed_at = :observed_at,
+                 notes = :notes,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id AND user_id = :user_id'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'user_id' => $userId,
+            'item_id' => $payload['item_id'],
+            'city_id' => $payload['city_id'],
+            'price_type' => $payload['price_type'],
+            'price_value' => $payload['price_value'],
+            'observed_at' => $payload['observed_at'],
+            'notes' => $payload['notes'],
+        ]);
+    }
+
+    public function deleteByIdAndUser(int $id, int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM market_prices WHERE id = :id AND user_id = :user_id');
+        $stmt->execute([
+            'id' => $id,
+            'user_id' => $userId,
+        ]);
+    }
+}

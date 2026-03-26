@@ -84,6 +84,12 @@ $router->post('/price-data/save', [App\Controllers\PriceDataController::class, '
     App\Middleware\PlanFeatureMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
+$router->post('/price-data/delete', [App\Controllers\PriceDataController::class, 'delete'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
 $router->get('/admin/subscription-requests', [App\Controllers\AdminSubscriptionController::class, 'index'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,

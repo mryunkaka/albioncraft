@@ -45,6 +45,7 @@
         <h2 class="card-title">Input Harga</h2>
         <form id="price-form" class="form" method="post" action="/price-data/save">
           <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
+          <input type="hidden" name="id" id="price-id" value="">
           <div class="grid">
             <label class="field xl:col-span-2">
               <span class="field-label">Item</span>
@@ -95,6 +96,7 @@
           </div>
           <div class="actions">
             <button class="button button-primary" type="submit" id="price-save-btn">Simpan Harga</button>
+            <button class="button button-ghost" type="button" id="price-cancel-edit" hidden>Batal Edit</button>
           </div>
         </form>
       </section>
@@ -150,10 +152,11 @@
               <th>Observed</th>
               <th>Updated</th>
               <th>Notes</th>
+              <th>Aksi</th>
             </tr>
             </thead>
             <tbody id="price-table-body">
-              <tr><td colspan="9">Loading...</td></tr>
+              <tr><td colspan="10">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -171,6 +174,6 @@
       csrfToken: <?= json_encode((string) ($csrf_token ?? ''), JSON_UNESCAPED_UNICODE) ?>
     };
   </script>
-  <script src="/assets/price-data.js?v=20260326-1"></script>
+  <script src="/assets/price-data.js?v=20260326-2"></script>
 </body>
 </html>

@@ -64,6 +64,7 @@ final class MarketPriceService
      */
     public function upsertPrice(int $userId, array $input): array
     {
+        $id = (int) ($input['id'] ?? 0);
         $itemId = (int) ($input['item_id'] ?? 0);
         $cityIdRaw = trim((string) ($input['city_id'] ?? ''));
         $cityId = $cityIdRaw === '' ? null : (int) $cityIdRaw;
@@ -90,6 +91,28 @@ final class MarketPriceService
             }
         }
 
+        if ($id > 0) {
+            $target = $this->prices->findByIdAndUser($id, $userId);
+            if ($target === null) {
+                return ['ok' => false, 'message' => 'Data harga tidak ditemukan.'];
+            }
+
+            $duplicate = $this->prices->findOneByUnique($userId, $itemId, $cityId, $priceType);
+            if ($duplicate !== null && (int) $duplicate['id'] !== $id) {
+                return ['ok' => false, 'message' => 'Kombinasi item/city/type sudah ada. Gunakan Edit pada data tersebut.'];
+            }
+
+            $this->prices->updateFull($id, $userId, [
+                'item_id' => $itemId,
+                'city_id' => $cityId,
+                'price_type' => $priceType,
+                'price_value' => $priceValue,
+                'observed_at' => $observedAtSql,
+                'notes' => $notes !== '' ? $notes : null,
+            ]);
+            return ['ok' => true, 'message' => 'Harga berhasil diupdate.'];
+        }
+
         $existing = $this->prices->findOneByUnique($userId, $itemId, $cityId, $priceType);
         if ($existing !== null) {
             $this->prices->update((int) $existing['id'], [
@@ -113,6 +136,24 @@ final class MarketPriceService
     }
 
     /**
+     * @return array{ok: bool, message: string}
+     */
+    public function deletePrice(int $userId, int $id): array
+    {
+        if ($id <= 0) {
+            return ['ok' => false, 'message' => 'ID tidak valid.'];
+        }
+
+        $target = $this->prices->findByIdAndUser($id, $userId);
+        if ($target === null) {
+            return ['ok' => false, 'message' => 'Data harga tidak ditemukan.'];
+        }
+
+        $this->prices->deleteByIdAndUser($id, $userId);
+        return ['ok' => true, 'message' => 'Data harga berhasil dihapus.'];
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function itemOptions(string $keyword = ''): array
@@ -131,4 +172,3 @@ final class MarketPriceService
         return $this->cities->listAll();
     }
 }
-

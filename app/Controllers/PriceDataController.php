@@ -75,6 +75,34 @@ final class PriceDataController
         Response::redirect('/price-data');
     }
 
+    public function delete(Request $request): void
+    {
+        $auth = Session::get('auth');
+        if (! is_array($auth) || ! isset($auth['user_id'])) {
+            Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
+            return;
+        }
+
+        $id = (int) $request->input('id', 0);
+        $service = new MarketPriceService();
+        $result = $service->deletePrice((int) $auth['user_id'], $id);
+
+        if ($request->isAjax()) {
+            Response::json([
+                'success' => $result['ok'],
+                'message' => $result['message'],
+            ], $result['ok'] ? 200 : 422);
+            return;
+        }
+
+        if ($result['ok']) {
+            Session::flash('success', $result['message']);
+        } else {
+            Session::flash('error', $result['message']);
+        }
+        Response::redirect('/price-data');
+    }
+
     public function items(Request $request): void
     {
         $auth = Session::get('auth');
