@@ -5,8 +5,8 @@ Dokumen ini dipakai sebagai handoff file utama agar AI lain atau engineer lain b
 
 ## Status Saat Ini
 Tanggal: 2026-03-26
-Fase: MVP Calculator (Strict) Implemented
-Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum)
+Fase: MVP Calculator + Auth Foundation Implemented
+Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/referral belum)
 
 ## Checklist Dokumen
 | File | Status | Catatan |
@@ -59,6 +59,20 @@ Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum
   - `app/Support/Router.php`, `app/Support/Request.php`, `app/Support/Response.php`
   - `app/Controllers/CalculatorController.php` dan `app/Views/calculator/index.php`
   - `public/assets/app.css` dan `public/assets/calculator.js`
+- Auth foundation sudah diimplementasikan:
+  - `app/Controllers/AuthController.php`
+  - `app/Controllers/DashboardController.php`
+  - `app/Services/AuthService.php`
+  - `app/Repositories/UserRepository.php`
+  - `app/Repositories/PlanRepository.php`
+  - `app/Views/auth/login.php`
+  - `app/Views/auth/register.php`
+  - `app/Views/dashboard/index.php`
+  - route baru: `/login`, `/register`, `/logout`, `/dashboard`
+- Runtime foundation tambahan:
+  - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
+  - `bootstrap/app.php` sekarang load `.env` dan start session
+  - `.env.example` sudah ada
 - Engine sekarang mengikuti mode simulasi spreadsheet:
   - target input adalah `target_output_qty` (jumlah item output)
   - `material_to_buy` dihitung dengan CEILING dan multiplier (1 - RRR) untuk RETURN
@@ -71,7 +85,8 @@ Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum
   - LocalStorage persist + tombol Clear
   - Tabel summary 1 baris (spreadsheet-like) + detail perhitungan via collapsible
   - Material list to buy bernomor + badge profit merah/hijau
-- Belum ada auth, subscription, referral, database repository layer, dan UI Tailwind build pipeline.
+- Subscription/referral logic dan middleware plan gating masih belum.
+- Tailwind local build + assets/components convention masih belum diterapkan penuh.
 - Deploy shared hosting (cPanel) sudah didokumentasikan di `docs/13`.
 - Deploy script yang dipakai adalah versi sederhana (mirip `deploy-sigaji.php`) tanpa token/lock, dan log format 1 baris RUN + baris Deploy per commit.
 
@@ -101,8 +116,11 @@ php tests/run_calculation_engine_tests.php
 ## Next Safe Continuation Point
 1. Lanjutkan bootstrap aplikasi PHP Native penuh sesuai `docs/03-project-structure.md`.
 2. Implementasikan schema database dari `docs/05-sql-schema.sql`.
-3. Implementasikan Auth + Session + middleware sesuai `docs/02`.
+3. Hardening Auth:
+   - tambah middleware `AuthMiddleware`/`GuestMiddleware`
+   - tambah CSRF token untuk form auth
+   - tambah fallback error view saat DB belum terkonfigurasi
 4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`.
 5. Tambahkan Tailwind build pipeline (NPM) dan pindahkan styling ke `assets/components/` (tanpa CDN).
-6. Tambahkan halaman Dashboard, Subscription, Referral, dan PRO Price Data.
+6. Tambahkan halaman Subscription, Referral, dan PRO Price Data.
 7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

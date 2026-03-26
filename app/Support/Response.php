@@ -22,5 +22,10 @@ final class Response
         header('Content-Type: text/html; charset=utf-8');
         echo $html;
     }
-}
 
+    public static function redirect(string $to, int $status = 302): void
+    {
+        http_response_code($status);
+        header('Location: ' . $to);
+    }
+}

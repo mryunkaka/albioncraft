@@ -13,6 +13,17 @@
     <header class="page-header">
       <h1 class="page-title">Albion Crafting Profit Calculator</h1>
       <p class="page-subtitle">Kalkulasi strict mengikuti docs/11 dan golden data docs/12.</p>
+      <div class="actions dashboard-actions">
+        <?php if (is_array($auth ?? null)): ?>
+          <a class="button button-secondary" href="/dashboard">Dashboard</a>
+          <form method="post" action="/logout">
+            <button class="button button-ghost" type="submit">Logout</button>
+          </form>
+        <?php else: ?>
+          <a class="button button-ghost" href="/login">Login</a>
+          <a class="button button-secondary" href="/register">Register</a>
+        <?php endif; ?>
+      </div>
     </header>
 
     <section class="card">

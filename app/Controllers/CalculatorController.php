@@ -8,18 +8,16 @@ use App\Services\CalculationEngineService;
 use App\Support\CalculationException;
 use App\Support\Request;
 use App\Support\Response;
+use App\Support\Session;
+use App\Support\View;
 
 final class CalculatorController
 {
     public function index(Request $request): void
     {
-        $viewPath = dirname(__DIR__) . '/Views/calculator/index.php';
-
-        ob_start();
-        require $viewPath;
-        $html = (string) ob_get_clean();
-
-        Response::html($html);
+        Response::html(View::render('calculator/index', [
+            'auth' => Session::get('auth'),
+        ]));
     }
 
     public function calculate(Request $request): void
@@ -50,4 +48,3 @@ final class CalculatorController
         ]);
     }
 }
-

@@ -19,6 +19,7 @@
 - Logout.
 - Session native.
 - Validasi referral code saat register.
+- Status saat ini: core auth flow sudah terpasang (MVP), hardening middleware+CSRF masih lanjut.
 
 ## Fase 3: Subscription dan Referral
 - Tabel plan, subscriptions, logs, referrals, referral rewards.

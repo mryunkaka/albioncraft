@@ -6,6 +6,31 @@ namespace App\Support;
 
 final class Request
 {
+    /**
+     * @param mixed $default
+     * @return mixed
+     */
+    public function input(string $key, $default = null)
+    {
+        return $_POST[$key] ?? $_GET[$key] ?? $default;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function post(): array
+    {
+        return is_array($_POST) ? $_POST : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function query(): array
+    {
+        return is_array($_GET) ? $_GET : [];
+    }
+
     public function method(): string
     {
         return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -54,4 +79,3 @@ final class Request
         return $requestedWith === 'xmlhttprequest';
     }
 }
-
