@@ -154,6 +154,9 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
   - `.env.example` sudah ada
+  - endpoint debug/setup sekarang hardening:
+    - route `/debug-db` dan `/setup/seed` hanya diregister saat `APP_DEBUG=1`
+    - saat production (`APP_DEBUG=0`) endpoint ini tidak tersedia (404)
 - Tailwind pipeline sudah aktif:
   - `package.json`, `tailwind.config.js`, `postcss.config.js`
   - source stylesheet: `assets/tailwind/app.css`
@@ -210,4 +213,4 @@ php tests/run_calculation_engine_tests.php
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
 5. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
 6. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).
-7. Rapikan endpoint debug/setup agar hanya aktif saat APP_DEBUG=1.
+7. (Done) Endpoint debug/setup sudah dibatasi hanya aktif saat APP_DEBUG=1.

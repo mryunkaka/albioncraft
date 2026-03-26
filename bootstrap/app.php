@@ -135,7 +135,11 @@ $router->post('/admin/subscription-requests/reject', [App\Controllers\AdminSubsc
     App\Middleware\AdminMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
-$router->get('/debug-db', [App\Controllers\DebugController::class, 'db']);
-$router->get('/setup/seed', [App\Controllers\SetupController::class, 'seed']);
+
+// Endpoint debug/setup hanya aktif saat APP_DEBUG=1.
+if (Env::get('APP_DEBUG', '0') === '1') {
+    $router->get('/debug-db', [App\Controllers\DebugController::class, 'db']);
+    $router->get('/setup/seed', [App\Controllers\SetupController::class, 'seed']);
+}
 
 return $router;

@@ -88,3 +88,4 @@
 - Sanitasi input.
 - Rate limit sederhana untuk auth bila diperlukan.
 - Status saat ini: rate limit auth sederhana sudah aktif untuk endpoint `POST /login` dan `POST /register`.
+- Status saat ini tambahan: endpoint utilitas `/debug-db` dan `/setup/seed` hanya aktif saat `APP_DEBUG=1`.
