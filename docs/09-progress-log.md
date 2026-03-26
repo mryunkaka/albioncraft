@@ -190,6 +190,11 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - backend bulk upsert memprioritaskan update row existing berdasarkan unique key `(user_id, item_id, city_id, price_type)`
   - lookup item/city mendukung code dan exact name
   - response bulk menampilkan ringkasan created/updated/error
+- Hardening UX bulk import/update tahap awal sudah ditambahkan:
+  - tombol isi contoh bulk
+  - tombol clear bulk
+  - feedback result terpisah dari daftar error
+  - textarea bulk tidak di-reset jika masih ada partial error
 - Histori kalkulasi + dashboard summary real sudah ditambahkan:
   - repository baru: `CalculationHistoryRepository`
   - service baru: `CalculationHistoryService`, `DashboardService`
@@ -260,7 +265,7 @@ php tests/run_calculation_engine_tests.php
 
 ## Next Safe Continuation Point
 1. QA manual UI untuk alur `recipe auto-fill` + `market_prices` user.
-2. Hardening UX bulk import/update harga untuk user PRO.
+2. Hardening UX bulk import/update harga untuk user PRO (lanjutan: preview/import summary yang lebih kaya bila diperlukan).
 3. Hardening Auth lanjutan:
    - rapikan UX flash error
    - pertimbangkan throttling endpoint API sensitif non-auth

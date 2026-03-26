@@ -275,6 +275,12 @@ try {
         expectTrue((float) $bulkRow['price_value'] === 1400.0, 'bulk update global BUY gagal mengubah price_value.', $failures);
     }
 
+    $bulkInvalid = $service->bulkUpsertPrices($userAId, [
+        'bulk_rows' => "item_code,city_code,price_type,price_value\nUNKNOWN_ITEM,,BUY,10",
+    ]);
+    expectTrue($bulkInvalid['ok'] === false, 'bulk import yang seluruh row-nya invalid harus gagal.', $failures);
+    expectTrue((int) ($bulkInvalid['error_count'] ?? 0) >= 1, 'bulk invalid harus mengembalikan minimal 1 error.', $failures);
+
     // Cleanup
     if ($created['users'] !== []) {
         $uidCsv = implode(',', array_map(static fn (int $v): string => (string) $v, $created['users']));

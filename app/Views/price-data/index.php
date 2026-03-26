@@ -112,8 +112,11 @@
           </label>
           <div class="actions">
             <button class="button button-secondary" type="submit" id="bulk-save-btn">Proses Bulk</button>
+            <button class="button button-ghost" type="button" id="bulk-fill-sample">Isi Contoh</button>
+            <button class="button button-ghost" type="button" id="bulk-clear">Clear Bulk</button>
           </div>
-          <div id="bulk-result" class="text-sm text-slate-600"></div>
+          <div id="bulk-result" class="text-sm text-slate-600" hidden></div>
+          <div id="bulk-errors" class="alert alert-error" hidden></div>
         </form>
       </section>
 

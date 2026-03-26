@@ -329,15 +329,20 @@ final class MarketPriceService
         }
 
         $errorCount = count($errors);
+        $successCount = $createdCount + $updatedCount;
+        $ok = $successCount > 0 || $errorCount === 0;
         $message = sprintf(
             'Bulk selesai. %d created, %d updated, %d error.',
             $createdCount,
             $updatedCount,
             $errorCount
         );
+        if (! $ok) {
+            $message = 'Bulk gagal. Semua row bermasalah. ' . $message;
+        }
 
         return [
-            'ok' => true,
+            'ok' => $ok,
             'message' => $message,
             'created_count' => $createdCount,
             'updated_count' => $updatedCount,
