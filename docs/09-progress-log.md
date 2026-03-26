@@ -55,6 +55,7 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - File engine ada di `app/Services/CalculationEngineService.php`.
 - Exception validasi ada di `app/Support/CalculationException.php`.
 - Test runner golden data ada di `tests/run_calculation_engine_tests.php`.
+- Test runner agregat untuk final verification sekarang ada di `tests/run_all_tests.php`.
 - Semua golden tests saat ini PASS.
 - Golden test calculator strict sekarang juga mencakup edge case tambahan:
   - `sell_price` kosong -> `scenario.mode = SRP_10_DEFAULT`
@@ -275,6 +276,11 @@ URL:
 Jalankan golden tests:
 ```powershell
 php tests/run_calculation_engine_tests.php
+```
+
+Jalankan seluruh suite utama:
+```powershell
+php tests/run_all_tests.php
 ```
 
 ## Status Akurasi

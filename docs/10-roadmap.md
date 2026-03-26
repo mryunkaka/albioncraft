@@ -90,6 +90,7 @@
   - integration test dashboard history: `tests/run_dashboard_history_tests.php` (PASS)
   - integration test recipe auto-fill: `tests/run_recipe_autofill_tests.php` (PASS)
   - integration test end-to-end recipe auto-fill -> calculate -> save history: `tests/run_recipe_autofill_e2e_tests.php` (PASS)
+  - aggregate runner final verification: `tests/run_all_tests.php`
 
 ## Fase 10: Hardening
 - Optimasi query dan indexing.
