@@ -68,6 +68,22 @@ $router->get('/price-data', [App\Controllers\PriceDataController::class, 'index'
     App\Middleware\SubscriptionMiddleware::class,
     App\Middleware\PlanFeatureMiddleware::class,
 ]);
+$router->get('/api/price-data/list', [App\Controllers\PriceDataController::class, 'list'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+]);
+$router->get('/api/price-data/items', [App\Controllers\PriceDataController::class, 'items'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+]);
+$router->post('/price-data/save', [App\Controllers\PriceDataController::class, 'save'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\PlanFeatureMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
 $router->get('/admin/subscription-requests', [App\Controllers\AdminSubscriptionController::class, 'index'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,

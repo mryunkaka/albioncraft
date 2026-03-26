@@ -102,6 +102,19 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - insert `subscription_logs`
     - insert `admin_subscription_actions` action `APPROVE_EXTEND`
   - reject menulis `admin_subscription_actions` action `REJECT_EXTEND`
+- PRO Price Data sudah naik dari placeholder ke foundation CRUD:
+  - repository/service baru:
+    - `ItemRepository`, `CityRepository`, `MarketPriceRepository`
+    - `MarketPriceService`
+  - endpoint baru:
+    - `GET /api/price-data/list` (pagination + search + filter)
+    - `GET /api/price-data/items` (item options search)
+    - `POST /price-data/save` (upsert market price, CSRF-protected)
+  - UI halaman `/price-data`:
+    - form input harga (item/city/type/value/observed_at/notes)
+    - tabel data harga load via AJAX
+    - debounce search/filter
+    - pagination next/prev tanpa reload full page
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -160,7 +173,8 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Lanjutkan halaman PRO Price Data dari placeholder ke CRUD + pagination + search.
+5. Tambahkan fitur edit cepat/inline update dan delete untuk market price.
 6. Tambahkan halaman khusus history admin action (opsional, read-only).
 7. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
-8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+8. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
+9. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
