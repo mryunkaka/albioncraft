@@ -24,6 +24,8 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 | 11-calculation-engine-strict-rules.md | done | Rules strict tersinkron dengan spreadsheet basis |
 | 12-test-case-golden-data.md | done | Golden data numerik tersinkron dengan strict rules |
 | 13-deployment-cpanel.md | done | Panduan deploy cPanel + cron (deploy script sederhana) |
+| 14-sql-repair-auth-referral-hosting.sql | done | SQL repair khusus issue auth/referral di shared hosting |
+| 15-sql-index-hardening.sql | done | SQL patch index hardening untuk query list/filter/pagination |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
@@ -180,6 +182,9 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - Tailwind local build + component system sudah terpasang untuk halaman utama (calculator/auth/dashboard); migrasi halaman fitur lanjutan mengikuti fase berikutnya.
 - Deploy shared hosting (cPanel) sudah didokumentasikan di `docs/13`.
 - Deploy script yang dipakai adalah versi sederhana (mirip `deploy-sigaji.php`) tanpa token/lock, dan log format 1 baris RUN + baris Deploy per commit.
+- Hardening index SQL sudah disiapkan:
+  - baseline schema sudah ditambah index performa di `docs/05-sql-schema.sql`
+  - patch aman untuk DB existing tersedia di `docs/15-sql-index-hardening.sql`
 
 ## Catatan Hosting (Penting)
 - Jika domain menampilkan 403 `Server unable to read htaccess file`, itu bukan masalah database atau PHP code.

@@ -48,6 +48,7 @@ CREATE TABLE subscriptions (
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_subscriptions_user_status (user_id, status, expired_at),
+    KEY idx_subscriptions_user_latest (user_id, id),
     CONSTRAINT fk_subscriptions_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_subscriptions_plan FOREIGN KEY (plan_id) REFERENCES plans(id)
 );
@@ -65,6 +66,7 @@ CREATE TABLE subscription_logs (
     notes TEXT NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_subscription_logs_user (user_id, created_at),
+    KEY idx_subscription_logs_user_id (user_id, id),
     CONSTRAINT fk_subscription_logs_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions(id),
     CONSTRAINT fk_subscription_logs_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -92,6 +94,7 @@ CREATE TABLE referral_rewards (
     notes TEXT NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_referral_rewards_user (rewarded_user_id, created_at),
+    KEY idx_referral_rewards_user_id (rewarded_user_id, id),
     CONSTRAINT fk_referral_rewards_referral FOREIGN KEY (referral_id) REFERENCES referrals(id),
     CONSTRAINT fk_referral_rewards_user FOREIGN KEY (rewarded_user_id) REFERENCES users(id)
 );
@@ -140,6 +143,7 @@ CREATE TABLE items (
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_items_category (category_id, name),
+    KEY idx_items_name (name),
     CONSTRAINT fk_items_category FOREIGN KEY (category_id) REFERENCES item_categories(id)
 );
 
@@ -181,6 +185,8 @@ CREATE TABLE market_prices (
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_market_prices_lookup (user_id, item_id, city_id, price_type),
+    KEY idx_market_prices_user_updated (user_id, updated_at, id),
+    KEY idx_market_prices_user_type_city_updated (user_id, price_type, city_id, updated_at, id),
     CONSTRAINT fk_market_prices_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_market_prices_item FOREIGN KEY (item_id) REFERENCES items(id),
     CONSTRAINT fk_market_prices_city FOREIGN KEY (city_id) REFERENCES cities(id)
@@ -211,6 +217,8 @@ CREATE TABLE admin_subscription_actions (
     notes TEXT NULL,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_admin_subscription_actions_user (user_id, created_at),
+    KEY idx_admin_subscription_actions_action (action_type, id),
+    KEY idx_admin_subscription_actions_notes_prefix (notes(191)),
     CONSTRAINT fk_admin_subscription_actions_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_admin_subscription_actions_plan FOREIGN KEY (plan_id) REFERENCES plans(id)
 );

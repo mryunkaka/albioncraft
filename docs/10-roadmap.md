@@ -89,3 +89,4 @@
 - Rate limit sederhana untuk auth bila diperlukan.
 - Status saat ini: rate limit auth sederhana sudah aktif untuk endpoint `POST /login` dan `POST /register`.
 - Status saat ini tambahan: endpoint utilitas `/debug-db` dan `/setup/seed` hanya aktif saat `APP_DEBUG=1`.
+- Status saat ini tambahan: patch index hardening sudah tersedia di `docs/15-sql-index-hardening.sql` dan baseline schema sudah diperbarui.
