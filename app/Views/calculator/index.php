@@ -16,7 +16,7 @@
     </header>
 
     <section class="card">
-      <h2 class="card-title">Quick Calculator</h2>
+      <h2 class="card-title">Quick Calculators</h2>
 
       <form id="calc-form" class="form">
         <div class="grid">
