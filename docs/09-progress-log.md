@@ -74,6 +74,15 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - router sudah support route-level middleware
   - form `login/register/logout` sudah memakai CSRF token
   - fallback runtime error view untuk kasus konfigurasi DB belum siap: `app/Views/errors/runtime.php`
+- Auth hardening lanjutan sudah diimplementasikan:
+  - middleware baru: `AuthRateLimitMiddleware`
+  - rate limit endpoint sensitif: `POST /login` dan `POST /register`
+  - konfigurasi env:
+    - `AUTH_RATE_LIMIT_MAX_ATTEMPTS` (default `5`)
+    - `AUTH_RATE_LIMIT_WINDOW_SECONDS` (default `900`)
+  - behavior:
+    - percobaan gagal berulang akan diblok sementara dengan flash error
+    - pada login/register sukses counter akan di-reset
 - Subscription/Plan gating foundation sudah diimplementasikan:
   - middleware baru: `SubscriptionMiddleware`, `PlanFeatureMiddleware`
   - service baru: `app/Services/SubscriptionService.php`
@@ -183,6 +192,6 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
-6. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
-7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+5. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
+6. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+7. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).

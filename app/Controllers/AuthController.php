@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use App\Support\AuthRateLimiter;
 use App\Support\Csrf;
 use App\Support\Request;
 use App\Support\Response;
@@ -45,12 +46,18 @@ final class AuthController
         $result = $service->login($request->post());
 
         if (! $result['ok']) {
+            $rate = AuthRateLimiter::hit('login', $request);
+            if (! $rate['allowed']) {
+                $retryAfter = max(1, (int) $rate['retry_after']);
+                Session::flash('error', "Terlalu banyak percobaan login. Coba lagi dalam {$retryAfter} detik.");
+            }
             Session::put('_old_errors', $result['errors']);
             Session::put('_old_input', ['email' => (string) $request->input('email', '')]);
             Response::redirect('/login');
             return;
         }
 
+        AuthRateLimiter::clear('login', $request);
         Session::flash('success', 'Login berhasil.');
         Response::redirect('/dashboard');
     }
@@ -87,12 +94,18 @@ final class AuthController
         $result = $service->register($request->post());
 
         if (! $result['ok']) {
+            $rate = AuthRateLimiter::hit('register', $request);
+            if (! $rate['allowed']) {
+                $retryAfter = max(1, (int) $rate['retry_after']);
+                Session::flash('error', "Terlalu banyak percobaan register. Coba lagi dalam {$retryAfter} detik.");
+            }
             Session::put('_old_errors', $result['errors']);
             Session::put('_old_input', $request->post());
             Response::redirect('/register');
             return;
         }
 
+        AuthRateLimiter::clear('register', $request);
         Session::flash('success', 'Register berhasil. Silakan login.');
         Response::redirect('/login');
     }

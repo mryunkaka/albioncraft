@@ -83,3 +83,4 @@
 - CSRF untuk form penting.
 - Sanitasi input.
 - Rate limit sederhana untuk auth bila diperlukan.
+- Status saat ini: rate limit auth sederhana sudah aktif untuk endpoint `POST /login` dan `POST /register`.

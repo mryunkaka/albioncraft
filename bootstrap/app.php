@@ -58,6 +58,7 @@ $router->get('/login', [App\Controllers\AuthController::class, 'showLogin'], [
 ]);
 $router->post('/login', [App\Controllers\AuthController::class, 'login'], [
     App\Middleware\GuestMiddleware::class,
+    App\Middleware\AuthRateLimitMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
 $router->get('/register', [App\Controllers\AuthController::class, 'showRegister'], [
@@ -65,6 +66,7 @@ $router->get('/register', [App\Controllers\AuthController::class, 'showRegister'
 ]);
 $router->post('/register', [App\Controllers\AuthController::class, 'register'], [
     App\Middleware\GuestMiddleware::class,
+    App\Middleware\AuthRateLimitMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
 $router->post('/logout', [App\Controllers\AuthController::class, 'logout'], [
