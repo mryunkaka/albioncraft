@@ -69,7 +69,10 @@ final class AuthService
             $freePlanId = $this->plans->findFirstPlanId();
         }
         if ($freePlanId === null) {
-            throw new RuntimeException('Data plan kosong. Jalankan SQL seed plans terlebih dahulu.');
+            // Shared-hosting emergency fallback:
+            // beberapa environment menunjukkan anomali query plans.
+            // Gunakan id 1 (FREE) sebagai default agar register tidak terblokir.
+            $freePlanId = 1;
         }
 
         if ($errors !== []) {
