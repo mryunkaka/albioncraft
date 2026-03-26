@@ -62,6 +62,10 @@ final class AuthService
 
         $freePlanId = $this->plans->findIdByCode('FREE');
         if ($freePlanId === null) {
+            $this->plans->ensureDefaultPlans();
+            $freePlanId = $this->plans->findIdByCode('FREE');
+        }
+        if ($freePlanId === null) {
             $freePlanId = $this->plans->findFirstPlanId();
         }
         if ($freePlanId === null) {

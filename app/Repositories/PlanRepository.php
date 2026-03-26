@@ -46,6 +46,19 @@ final class PlanRepository
         return $id > 0 ? $id : null;
     }
 
+    public function ensureDefaultPlans(): void
+    {
+        $sql = "INSERT INTO plans (code, name, sort_order) VALUES
+                ('FREE', 'Free', 1),
+                ('LITE', 'Lite', 2),
+                ('MEDIUM', 'Medium', 3),
+                ('PRO', 'Pro', 4)
+                ON DUPLICATE KEY UPDATE
+                  name = VALUES(name),
+                  sort_order = VALUES(sort_order)";
+        $this->db->exec($sql);
+    }
+
     /**
      * @return array<string, mixed>|null
      */
