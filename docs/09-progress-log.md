@@ -27,6 +27,7 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 | 14-sql-repair-auth-referral-hosting.sql | done | SQL repair khusus issue auth/referral di shared hosting |
 | 15-sql-index-hardening.sql | done | SQL patch index hardening untuk query list/filter/pagination |
 | 16-manual-qa-checklist.md | done | Checklist QA manual UI untuk price-data, recipe auto-fill, dan dashboard |
+| 17-market-analysis-guide.md | done | Panduan baca market dan mapping ke calculator berdasarkan materi referensi user |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
@@ -258,6 +259,9 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - Hardening index SQL sudah disiapkan:
   - baseline schema sudah ditambah index performa di `docs/05-sql-schema.sql`
   - patch aman untuk DB existing tersedia di `docs/15-sql-index-hardening.sql`
+- Dokumentasi user guidance tambahan sudah ditambahkan:
+  - `docs/17-market-analysis-guide.md`
+  - merangkum cara baca market dan pemetaan input spreadsheet/Famouzak ke calculator project
 
 ## Catatan Hosting (Penting)
 - Jika domain menampilkan 403 `Server unable to read htaccess file`, itu bukan masalah database atau PHP code.

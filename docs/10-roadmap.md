@@ -109,3 +109,5 @@
   - checklist tersedia di `docs/16-manual-qa-checklist.md`
 - Hardening UX bulk import/update harga untuk user PRO
   - status saat ini: feedback result/error list + sample template + retain input saat partial error sudah ditambahkan
+- User guidance / operational docs
+  - status saat ini: panduan baca market + mapping ke calculator tersedia di `docs/17-market-analysis-guide.md`
