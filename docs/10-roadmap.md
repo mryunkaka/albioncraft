@@ -100,6 +100,7 @@
 - Status saat ini: rate limit auth sederhana sudah aktif untuk endpoint `POST /login` dan `POST /register`.
 - Status saat ini tambahan: rate limit API sederhana sudah aktif untuk endpoint publik `POST /api/calculate`.
 - Status saat ini tambahan: endpoint utilitas `/debug-db` dan `/setup/seed` hanya aktif saat `APP_DEBUG=1`.
+- Status saat ini tambahan: `.env.example` sekarang default `APP_DEBUG=0` dan sudah mencantumkan env API limiter untuk safer production baseline.
 - Status saat ini tambahan: patch index hardening sudah tersedia di `docs/15-sql-index-hardening.sql` dan baseline schema sudah diperbarui.
 
 ## Next Priority

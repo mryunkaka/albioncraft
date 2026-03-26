@@ -26,6 +26,24 @@ cd /home/hark8423/public_html/albioncraft
 git remote -v
 ```
 
+## 2.1 Konfigurasi `.env` untuk Production
+Sebelum domain dibuka ke publik, pastikan `.env` production minimal memakai nilai berikut:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=0
+SETUP_TOKEN=isi-token-acak-panjang-jika-masih-perlu-seed-manual
+AUTH_RATE_LIMIT_MAX_ATTEMPTS=5
+AUTH_RATE_LIMIT_WINDOW_SECONDS=900
+API_RATE_LIMIT_MAX_ATTEMPTS=30
+API_RATE_LIMIT_WINDOW_SECONDS=60
+```
+
+Catatan:
+- `APP_DEBUG=0` wajib untuk production.
+- Saat `APP_DEBUG=0`, route `/debug-db` dan `/setup/seed` tidak diregister, sehingga tidak bisa diakses publik.
+- `SETUP_TOKEN` hanya dipakai bila Anda memang masih ingin memakai `setup/seed` di environment debug/manual tertentu. Untuk production normal, route tersebut sebaiknya tetap tidak dipakai.
+
 ## 3. Deploy Script (Cron + Manual)
 File deploy sederhana (mengikuti pola yang sudah terbukti jalan seperti `deploy-sigaji.php`) ada di repo:
 - `deploy-albion.php`
@@ -76,6 +94,8 @@ Solusi:
 - Akses `http://albion.harikenangan.my.id/calculator`
 - Pastikan `.htaccess` berfungsi (route selain file statik tidak 404)
 - Jika ada 500 error: cek error log domain di cPanel
+- Pastikan `.env` di hosting tidak memakai `APP_DEBUG=1`
+- Pastikan endpoint `/debug-db` dan `/setup/seed` menghasilkan 404 di production
 
 ## 6. Troubleshooting: 403 Forbidden "Server unable to read htaccess file"
 Jika halaman domain menampilkan:
