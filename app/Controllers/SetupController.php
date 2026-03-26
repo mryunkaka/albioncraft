@@ -15,8 +15,14 @@ final class SetupController
     {
         $token = trim((string) $request->input('token', ''));
         $expected = trim(Env::get('SETUP_TOKEN', ''));
+        $debug = Env::get('APP_DEBUG', '0') === '1';
 
-        if ($expected === '' || $token === '' || ! hash_equals($expected, $token)) {
+        if ($expected !== '') {
+            if ($token === '' || ! hash_equals($expected, $token)) {
+                Response::html('Forbidden', 403);
+                return;
+            }
+        } elseif (! $debug) {
             Response::html('Forbidden', 403);
             return;
         }
@@ -62,4 +68,3 @@ final class SetupController
         Response::html('<pre>' . htmlspecialchars(implode("\n", $out), ENT_QUOTES, 'UTF-8') . '</pre>');
     }
 }
-
