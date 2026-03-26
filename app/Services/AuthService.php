@@ -57,7 +57,7 @@ final class AuthService
         }
 
         if ($referredByCode !== '' && $this->users->findByReferralCode($referredByCode) === null) {
-            $errors['referral_code'] = 'Referral code tidak ditemukan.';
+            $errors['referral_code'] = 'Kode referral salah, mohon ketik ulang.';
         }
 
         $freePlan = $this->plans->findByCode('FREE');
