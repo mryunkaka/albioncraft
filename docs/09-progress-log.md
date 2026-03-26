@@ -133,6 +133,14 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - behavior:
     - percobaan gagal berulang akan diblok sementara dengan flash error
     - pada login/register sukses counter akan di-reset
+- API hardening awal sudah ditambahkan:
+  - support baru: `app/Support/ApiRateLimiter.php`
+  - middleware baru: `app/Middleware/ApiRateLimitMiddleware.php`
+  - endpoint publik `POST /api/calculate` sekarang dibatasi per fingerprint IP + User-Agent
+  - default env:
+    - `API_RATE_LIMIT_MAX_ATTEMPTS` (default `30`)
+    - `API_RATE_LIMIT_WINDOW_SECONDS` (default `60`)
+  - blocked response: HTTP `429` JSON + header `Retry-After`
 - Subscription/Plan gating foundation sudah diimplementasikan:
   - middleware baru: `SubscriptionMiddleware`, `PlanFeatureMiddleware`
   - service baru: `app/Services/SubscriptionService.php`
@@ -269,6 +277,6 @@ php tests/run_calculation_engine_tests.php
 2. Hardening UX bulk import/update harga untuk user PRO (lanjutan: preview/import summary yang lebih kaya bila diperlukan).
 3. Hardening Auth lanjutan:
    - status saat ini: summary validation/auth error + old input auth lebih aman sudah ditambahkan
-   - pertimbangkan throttling endpoint API sensitif non-auth
+   - throttling endpoint API sensitif non-auth sudah diterapkan untuk `POST /api/calculate`
 4. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
 5. Review cleanup endpoint debug/setup untuk deployment production.

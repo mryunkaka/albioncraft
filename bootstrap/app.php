@@ -52,7 +52,9 @@ $router = new Router();
 // Routes
 $router->get('/', [App\Controllers\CalculatorController::class, 'index']);
 $router->get('/calculator', [App\Controllers\CalculatorController::class, 'index']);
-$router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'calculate']);
+$router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'calculate'], [
+    App\Middleware\ApiRateLimitMiddleware::class,
+]);
 $router->get('/api/calculator/recipes/items', [App\Controllers\CalculatorController::class, 'recipeItems'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,
