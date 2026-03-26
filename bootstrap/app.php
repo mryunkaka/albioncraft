@@ -133,5 +133,6 @@ $router->post('/admin/subscription-requests/reject', [App\Controllers\AdminSubsc
     App\Middleware\AdminMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
+$router->get('/debug-db', [App\Controllers\DebugController::class, 'db']);
 
 return $router;
