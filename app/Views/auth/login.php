@@ -20,6 +20,16 @@
       <?php if (!empty($flash_success)): ?>
         <div class="alert"><?= htmlspecialchars((string) $flash_success) ?></div>
       <?php endif; ?>
+      <?php if (!empty($error_summary) && is_array($error_summary)): ?>
+        <div class="alert alert-error">
+          <strong>Periksa input login:</strong>
+          <ul class="mt-1">
+            <?php foreach ($error_summary as $message): ?>
+              <li><?= htmlspecialchars((string) $message) ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
       <?php if (!empty($errors['auth'])): ?>
         <div class="alert alert-error"><?= htmlspecialchars((string) $errors['auth']) ?></div>
       <?php endif; ?>
@@ -48,4 +58,3 @@
   </main>
 </body>
 </html>
-

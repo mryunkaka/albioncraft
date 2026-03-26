@@ -103,5 +103,6 @@
 
 ## Next Priority
 - QA manual UI untuk alur `recipe auto-fill` + `market_prices` user
+  - checklist tersedia di `docs/16-manual-qa-checklist.md`
 - Hardening UX bulk import/update harga untuk user PRO
   - status saat ini: feedback result/error list + sample template + retain input saat partial error sudah ditambahkan

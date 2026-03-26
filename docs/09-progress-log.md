@@ -26,6 +26,7 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 | 13-deployment-cpanel.md | done | Panduan deploy cPanel + cron (deploy script sederhana) |
 | 14-sql-repair-auth-referral-hosting.sql | done | SQL repair khusus issue auth/referral di shared hosting |
 | 15-sql-index-hardening.sql | done | SQL patch index hardening untuk query list/filter/pagination |
+| 16-manual-qa-checklist.md | done | Checklist QA manual UI untuk price-data, recipe auto-fill, dan dashboard |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
@@ -264,10 +265,10 @@ php tests/run_calculation_engine_tests.php
 - Opsi tambahan: `INGAME_PER_CRAFT` untuk rounding lebih granular. Ini lebih dekat ke in-game, tetapi tidak dijamin 100% identik untuk semua situasi.
 
 ## Next Safe Continuation Point
-1. QA manual UI untuk alur `recipe auto-fill` + `market_prices` user.
+1. Jalankan QA manual UI memakai `docs/16-manual-qa-checklist.md`.
 2. Hardening UX bulk import/update harga untuk user PRO (lanjutan: preview/import summary yang lebih kaya bila diperlukan).
 3. Hardening Auth lanjutan:
-   - rapikan UX flash error
+   - status saat ini: summary validation/auth error + old input auth lebih aman sudah ditambahkan
    - pertimbangkan throttling endpoint API sensitif non-auth
 4. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
 5. Review cleanup endpoint debug/setup untuk deployment production.
