@@ -134,6 +134,101 @@ final class MarketPriceRepository
         return is_array($row) ? $row : null;
     }
 
+    /**
+     * @param array<int, int> $itemIds
+     * @return array<int, float>
+     */
+    public function resolvePriceMapByItems(int $userId, array $itemIds, ?int $cityId, string $priceType): array
+    {
+        $itemIds = array_values(array_unique(array_filter(array_map('intval', $itemIds), static fn (int $id): bool => $id > 0)));
+        if ($itemIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [
+            'user_id' => $userId,
+            'price_type' => $priceType,
+        ];
+
+        foreach ($itemIds as $index => $itemId) {
+            $key = 'item_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $itemId;
+        }
+
+        $inSql = implode(', ', $placeholders);
+        $rows = [];
+
+        if ($cityId !== null && $cityId > 0) {
+            $citySql = "SELECT item_id, price_value
+                        FROM market_prices
+                        WHERE user_id = :user_id
+                          AND price_type = :price_type
+                          AND city_id = :city_id
+                          AND item_id IN ({$inSql})";
+            $cityStmt = $this->db->prepare($citySql);
+            foreach ($params as $key => $value) {
+                $cityStmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            }
+            $cityStmt->bindValue(':city_id', $cityId, PDO::PARAM_INT);
+            $cityStmt->execute();
+            $cityRows = $cityStmt->fetchAll();
+            if (is_array($cityRows)) {
+                foreach ($cityRows as $row) {
+                    $itemId = (int) ($row['item_id'] ?? 0);
+                    if ($itemId > 0) {
+                        $rows[$itemId] = (float) ($row['price_value'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        $missingItemIds = array_values(array_filter(
+            $itemIds,
+            static fn (int $itemId): bool => ! array_key_exists($itemId, $rows)
+        ));
+
+        if ($missingItemIds === []) {
+            return $rows;
+        }
+
+        $globalPlaceholders = [];
+        $globalParams = [
+            'user_id' => $userId,
+            'price_type' => $priceType,
+        ];
+
+        foreach ($missingItemIds as $index => $itemId) {
+            $key = 'global_item_' . $index;
+            $globalPlaceholders[] = ':' . $key;
+            $globalParams[$key] = $itemId;
+        }
+
+        $globalSql = 'SELECT item_id, price_value
+                      FROM market_prices
+                      WHERE user_id = :user_id
+                        AND price_type = :price_type
+                        AND city_id IS NULL
+                        AND item_id IN (' . implode(', ', $globalPlaceholders) . ')';
+        $globalStmt = $this->db->prepare($globalSql);
+        foreach ($globalParams as $key => $value) {
+            $globalStmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $globalStmt->execute();
+        $globalRows = $globalStmt->fetchAll();
+        if (is_array($globalRows)) {
+            foreach ($globalRows as $row) {
+                $itemId = (int) ($row['item_id'] ?? 0);
+                if ($itemId > 0 && ! array_key_exists($itemId, $rows)) {
+                    $rows[$itemId] = (float) ($row['price_value'] ?? 0);
+                }
+            }
+        }
+
+        return $rows;
+    }
+
     public function insert(array $payload): int
     {
         $stmt = $this->db->prepare(

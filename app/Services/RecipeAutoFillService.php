@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Repositories\CityRepository;
+use App\Repositories\MarketPriceRepository;
 use App\Repositories\RecipeRepository;
 use App\Support\Database;
 
@@ -12,12 +13,14 @@ final class RecipeAutoFillService
 {
     private RecipeRepository $recipes;
     private CityRepository $cities;
+    private MarketPriceRepository $prices;
 
     public function __construct()
     {
         $db = Database::connection();
         $this->recipes = new RecipeRepository($db);
         $this->cities = new CityRepository($db);
+        $this->prices = new MarketPriceRepository($db);
     }
 
     /**
@@ -39,7 +42,7 @@ final class RecipeAutoFillService
     /**
      * @return array{ok: bool, message: string, data?: array<string, mixed>}
      */
-    public function recipeDetail(int $itemId, ?int $cityId = null): array
+    public function recipeDetail(int $itemId, ?int $cityId = null, ?int $userId = null): array
     {
         if ($itemId <= 0) {
             return ['ok' => false, 'message' => 'Item recipe tidak valid.'];
@@ -55,14 +58,43 @@ final class RecipeAutoFillService
             return ['ok' => false, 'message' => 'Recipe item tidak valid.'];
         }
 
+        $materialRows = $this->recipes->listMaterialsByRecipeId($recipeId);
+        $materialPriceMap = [];
+        $sellPrice = null;
+
+        if (($userId ?? 0) > 0) {
+            $materialItemIds = array_map(
+                static fn (array $row): int => (int) ($row['material_item_id'] ?? 0),
+                $materialRows
+            );
+            $materialPriceMap = $this->prices->resolvePriceMapByItems(
+                (int) $userId,
+                $materialItemIds,
+                $cityId,
+                'BUY'
+            );
+
+            $sellPriceMap = $this->prices->resolvePriceMapByItems(
+                (int) $userId,
+                [(int) ($recipe['item_id'] ?? 0)],
+                $cityId,
+                'SELL'
+            );
+            $recipeItemId = (int) ($recipe['item_id'] ?? 0);
+            if ($recipeItemId > 0 && array_key_exists($recipeItemId, $sellPriceMap)) {
+                $sellPrice = (float) $sellPriceMap[$recipeItemId];
+            }
+        }
+
         $materials = [];
-        foreach ($this->recipes->listMaterialsByRecipeId($recipeId) as $row) {
+        foreach ($materialRows as $row) {
+            $materialItemId = (int) ($row['material_item_id'] ?? 0);
             $materials[] = [
-                'item_id' => (int) ($row['material_item_id'] ?? 0),
+                'item_id' => $materialItemId,
                 'item_code' => (string) ($row['material_item_code'] ?? ''),
                 'name' => (string) ($row['material_name'] ?? ''),
                 'qty_per_recipe' => (float) ($row['qty_per_recipe'] ?? 0),
-                'buy_price' => 0,
+                'buy_price' => (float) ($materialPriceMap[$materialItemId] ?? 0),
                 'return_type' => (string) ($row['return_type'] ?? 'RETURN'),
                 'sort_order' => (int) ($row['sort_order'] ?? 0),
             ];
@@ -87,6 +119,7 @@ final class RecipeAutoFillService
                     'name' => (string) ($recipe['item_name'] ?? ''),
                     'item_value' => (float) ($recipe['item_value'] ?? 0),
                     'output_qty' => (int) ($recipe['recipe_output_qty'] ?? $recipe['default_output_qty'] ?? 1),
+                    'sell_price' => $sellPrice,
                     'tier' => (string) ($recipe['tier'] ?? ''),
                     'enchantment_level' => (string) ($recipe['enchantment_level'] ?? ''),
                 ],

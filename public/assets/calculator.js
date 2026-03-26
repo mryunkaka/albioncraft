@@ -137,6 +137,7 @@
     setFieldValue("item_name", item.name || "");
     setFieldValue("item_value", item.item_value != null ? item.item_value : 0);
     setFieldValue("output_qty", item.output_qty != null ? item.output_qty : 1);
+    setFieldValue("sell_price", item.sell_price != null ? item.sell_price : "");
     setFieldValue("bonus_local", cityBonus.bonus_percent != null ? cityBonus.bonus_percent : 0);
 
     clearMaterials();

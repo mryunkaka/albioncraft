@@ -110,7 +110,7 @@ final class CalculatorController
         $cityId = (int) $request->input('city_id', 0);
 
         $service = new RecipeAutoFillService();
-        $result = $service->recipeDetail($itemId, $cityId > 0 ? $cityId : null);
+        $result = $service->recipeDetail($itemId, $cityId > 0 ? $cityId : null, (int) $auth['user_id']);
 
         Response::json([
             'success' => $result['ok'],
