@@ -53,6 +53,13 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - Exception validasi ada di `app/Support/CalculationException.php`.
 - Test runner golden data ada di `tests/run_calculation_engine_tests.php`.
 - Semua golden tests saat ini PASS.
+- Integration test flow subscription/referral/admin approval sudah ditambahkan:
+  - `tests/run_subscription_referral_admin_tests.php`
+  - mencakup:
+    - referral reward saat register
+    - request extend -> approve admin
+    - request extend -> reject admin
+    - auto-downgrade FREE saat expired
 - Bootstrap autoload minimal sudah ada di `bootstrap/autoload.php`.
 - Skeleton web minimal sudah ada:
   - `public/index.php` dan `bootstrap/app.php`
@@ -192,6 +199,6 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
+5. Tambahkan automated test untuk market price service.
 6. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
 7. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).

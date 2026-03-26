@@ -76,6 +76,9 @@
 - Uji premium vs non-premium.
 - Uji SRP 5, 10, 15.
 - Pastikan deviasi <= 0.1%.
+- Status saat ini:
+  - golden test calculator strict: `tests/run_calculation_engine_tests.php` (PASS)
+  - integration test subscription/referral/admin approval: `tests/run_subscription_referral_admin_tests.php` (PASS)
 
 ## Fase 10: Hardening
 - Optimasi query dan indexing.
