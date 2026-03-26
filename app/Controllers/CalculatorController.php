@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\CalculationEngineService;
+use App\Services\CalculationHistoryService;
 use App\Support\CalculationException;
 use App\Support\Csrf;
 use App\Support\Request;
@@ -42,6 +43,16 @@ final class CalculatorController
                 'message' => 'Internal error.',
             ], 500);
             return;
+        }
+
+        $auth = Session::get('auth');
+        if (is_array($auth) && isset($auth['user_id'])) {
+            try {
+                $historyService = new CalculationHistoryService();
+                $historyService->store($auth, $payload, $result);
+            } catch (\Throwable) {
+                // Histori kalkulasi tidak boleh memblokir response calculator.
+            }
         }
 
         Response::json([

@@ -71,6 +71,12 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - filter/search/pagination list
     - ownership check delete
     - item options + city options
+- Integration test dashboard history sudah ditambahkan:
+  - `tests/run_dashboard_history_tests.php`
+  - mencakup:
+    - simpan histori kalkulasi
+    - ringkasan dashboard dari histori
+    - latest/recent rows
 - Bootstrap autoload minimal sudah ada di `bootstrap/autoload.php`.
 - Skeleton web minimal sudah ada:
   - `public/index.php` dan `bootstrap/app.php`
@@ -152,6 +158,17 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
   - delete: klik `Delete` pada row (AJAX + CSRF)
   - endpoint baru: `POST /price-data/delete`
   - backend update by `id` + ownership check (`user_id`)
+- Histori kalkulasi + dashboard summary real sudah ditambahkan:
+  - repository baru: `CalculationHistoryRepository`
+  - service baru: `CalculationHistoryService`, `DashboardService`
+  - `POST /api/calculate` otomatis menyimpan histori jika user login
+  - dashboard menampilkan:
+    - total histori
+    - akumulasi profit simulasi 20 histori terbaru
+    - rata-rata margin
+    - win/loss count
+    - kalkulasi terakhir
+    - recent calculation history table
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -210,12 +227,10 @@ php tests/run_calculation_engine_tests.php
 - Opsi tambahan: `INGAME_PER_CRAFT` untuk rounding lebih granular. Ini lebih dekat ke in-game, tetapi tidak dijamin 100% identik untuk semua situasi.
 
 ## Next Safe Continuation Point
-1. Lanjutkan bootstrap aplikasi PHP Native penuh sesuai `docs/03-project-structure.md`.
-2. Implementasikan schema database dari `docs/05-sql-schema.sql`.
+1. Tambahkan preset/auto-fill recipe database untuk plan MEDIUM/PRO di calculator.
+2. Tambahkan bulk import/update harga yang lebih efisien untuk user PRO.
 3. Hardening Auth lanjutan:
-   - tambah validasi/refactor flow flash error UX
-   - tambah CSRF coverage untuk form lain yang nanti ditambahkan
-4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
-6. Evaluasi hardening lanjutan: throttling endpoint API sensitif non-auth (opsional v1.1).
-7. (Done) Endpoint debug/setup sudah dibatasi hanya aktif saat APP_DEBUG=1.
+   - rapikan UX flash error
+   - pertimbangkan throttling endpoint API sensitif non-auth
+4. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+5. Review cleanup endpoint debug/setup untuk deployment production.

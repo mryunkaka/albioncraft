@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\DashboardService;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -23,9 +24,13 @@ final class DashboardController
 
         $auth = Session::get('auth');
         $email = is_array($auth) ? (string) ($auth['email'] ?? '') : '';
+        $userId = is_array($auth) ? (int) ($auth['user_id'] ?? 0) : 0;
+        $dashboard = new DashboardService();
+        $overview = $dashboard->overview($userId);
 
         Response::html(View::render('dashboard/index', [
-            'user' => $auth,
+            'user' => $overview['user'] ?? $auth,
+            'calculation_summary' => $overview['calculation_summary'] ?? [],
             'is_admin' => AdminAccess::isAdminEmail($email),
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
