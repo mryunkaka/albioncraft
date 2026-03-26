@@ -23,6 +23,18 @@ final class PlanRepository
         return is_array($row) ? $row : null;
     }
 
+    public function findIdByCode(string $code): ?int
+    {
+        $stmt = $this->db->prepare('SELECT id FROM plans WHERE code = :code LIMIT 1');
+        $stmt->execute(['code' => strtoupper($code)]);
+        $value = $stmt->fetchColumn();
+        if ($value === false) {
+            return null;
+        }
+        $id = (int) $value;
+        return $id > 0 ? $id : null;
+    }
+
     /**
      * @return array<string, mixed>|null
      */

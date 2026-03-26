@@ -60,8 +60,8 @@ final class AuthService
             $errors['referral_code'] = 'Kode referral salah, mohon ketik ulang.';
         }
 
-        $freePlan = $this->plans->findByCode('FREE');
-        if ($freePlan === null) {
+        $freePlanId = $this->plans->findIdByCode('FREE');
+        if ($freePlanId === null) {
             throw new RuntimeException('Plan FREE tidak ditemukan. Jalankan SQL seed terlebih dahulu.');
         }
 
@@ -75,7 +75,7 @@ final class AuthService
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'referral_code' => $this->generateReferralCode(),
             'referred_by_code' => $referredByCode !== '' ? $referredByCode : null,
-            'plan_id' => (int) $freePlan['id'],
+            'plan_id' => $freePlanId,
             'plan_expired_at' => null,
             'status' => 'ACTIVE',
         ]);
