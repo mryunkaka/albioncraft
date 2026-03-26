@@ -134,3 +134,18 @@ Semua styling reusable diletakkan di `assets/components`.
 - Tidak ada inline style.
 - Tidak ada CDN.
 - Tidak ada class styling liar langsung di view bila itu bisa dijadikan reusable component class.
+
+## Status Implementasi Saat Ini
+- Tailwind CSS sudah diinstall lokal via NPM (tanpa CDN).
+- Build output aktif ke `public/assets/app.css` lewat `npm run build`.
+- Komponen reusable sudah dipecah di:
+  - `assets/components/base.css`
+  - `assets/components/layout.css`
+  - `assets/components/form.css`
+  - `assets/components/button.css`
+  - `assets/components/card.css`
+  - `assets/components/table.css`
+  - `assets/components/modal.css`
+  - `assets/components/widgets.css`
+  - `assets/components/animations.css`
+- View auth/dashboard/calculator sudah diarahkan memakai class komponen (tanpa inline styling).

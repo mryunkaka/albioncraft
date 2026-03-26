@@ -1,0 +1,34 @@
+@layer components {
+  .modal {
+    @apply fixed inset-0 z-50 hidden items-center justify-center p-4;
+  }
+
+  .modal.is-open {
+    @apply flex;
+  }
+
+  .modal-backdrop {
+    @apply absolute inset-0 bg-slate-900/50 backdrop-blur-sm;
+  }
+
+  .modal-panel {
+    @apply relative z-10 w-full max-w-lg animate-fade-in-up rounded-2xl border border-blue-100 bg-white shadow-soft;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between border-b border-blue-100 px-4 py-3;
+  }
+
+  .modal-title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .modal-content {
+    @apply space-y-3 px-4 py-4 text-sm text-slate-600;
+  }
+
+  .modal-footer {
+    @apply flex items-center justify-end gap-2 border-t border-blue-100 px-4 py-3;
+  }
+}
+

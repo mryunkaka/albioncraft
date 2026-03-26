@@ -1,0 +1,29 @@
+@layer base {
+  :root {
+    --surface-1: #f3f8ff;
+    --surface-2: #ffffff;
+    --ink-1: #0f172a;
+    --ink-2: #475569;
+    --line: #d8e6ff;
+    --danger: #b91c1c;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body {
+    @apply h-full;
+  }
+
+  body {
+    @apply m-0 overflow-x-hidden font-body text-slate-900 antialiased;
+    background:
+      linear-gradient(180deg, #f8fbff 0%, #f3f8ff 100%);
+  }
+
+  a {
+    @apply text-brand-700 no-underline;
+  }
+}

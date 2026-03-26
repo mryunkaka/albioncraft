@@ -1,0 +1,18 @@
+@layer components {
+  .animate-stagger > * {
+    @apply animate-fade-in-up;
+  }
+
+  .animate-stagger > *:nth-child(2) {
+    animation-delay: 70ms;
+  }
+
+  .animate-stagger > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  .animate-stagger > *:nth-child(4) {
+    animation-delay: 170ms;
+  }
+}
+

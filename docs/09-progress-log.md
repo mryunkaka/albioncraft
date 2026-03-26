@@ -78,6 +78,12 @@ Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
   - `.env.example` sudah ada
+- Tailwind pipeline sudah aktif:
+  - `package.json`, `tailwind.config.js`, `postcss.config.js`
+  - source stylesheet: `assets/tailwind/app.css`
+  - reusable UI components di `assets/components/*`
+  - build output ke `public/assets/app.css` via `npm run build`
+  - script UI kalkulator sinkron: `assets/js/calculator.js` -> `public/assets/calculator.js`
 - Engine sekarang mengikuti mode simulasi spreadsheet:
   - target input adalah `target_output_qty` (jumlah item output)
   - `material_to_buy` dihitung dengan CEILING dan multiplier (1 - RRR) untuk RETURN
@@ -92,6 +98,7 @@ Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/
   - Material list to buy bernomor + badge profit merah/hijau
 - Subscription/referral logic dan middleware plan gating masih belum.
 - Tailwind local build + assets/components convention masih belum diterapkan penuh.
+- Tailwind local build + component system sudah terpasang untuk halaman utama (calculator/auth/dashboard); migrasi halaman fitur lanjutan mengikuti fase berikutnya.
 - Deploy shared hosting (cPanel) sudah didokumentasikan di `docs/13`.
 - Deploy script yang dipakai adalah versi sederhana (mirip `deploy-sigaji.php`) tanpa token/lock, dan log format 1 baris RUN + baris Deploy per commit.
 
@@ -127,5 +134,6 @@ php tests/run_calculation_engine_tests.php
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`.
 5. Tambahkan Tailwind build pipeline (NPM) dan pindahkan styling ke `assets/components/` (tanpa CDN).
-6. Tambahkan halaman Subscription, Referral, dan PRO Price Data.
-7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+6. Implementasikan `SubscriptionMiddleware` + `PlanFeatureMiddleware`.
+7. Tambahkan halaman Subscription, Referral, dan PRO Price Data.
+8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

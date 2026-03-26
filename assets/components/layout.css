@@ -1,0 +1,98 @@
+@layer components {
+  .app-shell {
+    @apply relative min-h-screen;
+  }
+
+  .sidebar-backdrop {
+    @apply pointer-events-none fixed inset-0 z-30 bg-slate-900/30 opacity-0 transition duration-200;
+  }
+
+  .app-sidebar {
+    @apply fixed left-0 top-0 z-40 flex h-screen w-[280px] -translate-x-full flex-col gap-6 border-r border-blue-100 bg-white p-5 shadow-soft transition duration-300;
+  }
+
+  .app-sidebar.is-open {
+    @apply translate-x-0;
+  }
+
+  .sidebar-backdrop.is-open {
+    @apply pointer-events-auto opacity-100;
+  }
+
+  .sidebar-brand {
+    @apply text-lg font-semibold tracking-tight text-brand-800;
+  }
+
+  .sidebar-subtitle {
+    @apply text-xs text-slate-500;
+  }
+
+  .sidebar-nav {
+    @apply mt-2 flex flex-col gap-2;
+  }
+
+  .nav-link {
+    @apply rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition duration-200 hover:bg-brand-50 hover:text-brand-700;
+  }
+
+  .nav-link.active {
+    @apply bg-brand-600 text-white shadow-soft;
+  }
+
+  .app-main {
+    @apply flex min-h-screen min-w-0 flex-col;
+  }
+
+  .app-header {
+    @apply sticky top-0 z-20 border-b border-blue-100 bg-white/85 backdrop-blur-md;
+  }
+
+  .header-inner {
+    @apply mx-auto flex w-full max-w-[1280px] min-w-0 items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8;
+  }
+
+  .mobile-brand {
+    @apply md:hidden text-sm font-semibold text-brand-800;
+  }
+
+  .header-actions {
+    @apply flex items-center gap-2;
+  }
+
+  .app-content {
+    @apply mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8;
+  }
+
+  .app-footer {
+    @apply border-t border-blue-100 bg-white/70 px-4 py-3 text-xs text-slate-500 sm:px-6 lg:px-8;
+  }
+
+  .container {
+    @apply w-full min-w-0;
+  }
+
+  .page-header {
+    @apply mb-4 animate-fade-in-up;
+  }
+
+  .page-title {
+    @apply m-0 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-slate-600;
+  }
+
+  .stack {
+    @apply space-y-4;
+  }
+
+  .auth-page {
+    @apply min-h-screen px-4 py-8;
+    background: linear-gradient(180deg, #f8fbff 0%, #f1f7ff 100%);
+  }
+
+  .auth-wrap {
+    @apply mx-auto w-full max-w-md;
+  }
+}

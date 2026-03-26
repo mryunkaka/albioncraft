@@ -1,0 +1,33 @@
+{
+  "name": "albion",
+  "version": "1.0.0",
+  "description": "Albion Crafting Profit Calculator - PHP Native + Tailwind local build.",
+  "main": "public/index.php",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tailwindcss -i ./assets/tailwind/app.css -o ./public/assets/app.css --minify",
+    "dev": "tailwindcss -i ./assets/tailwind/app.css -o ./public/assets/app.css --watch",
+    "test:calc": "php tests/run_calculation_engine_tests.php"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mryunkaka/albioncraft.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mryunkaka/albioncraft/issues"
+  },
+  "homepage": "https://github.com/mryunkaka/albioncraft#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "postcss-import": "^16.1.1",
+    "tailwindcss": "^3.4.17"
+  }
+}

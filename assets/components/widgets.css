@@ -1,0 +1,58 @@
+@layer components {
+  .widgets {
+    @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .widget {
+    @apply rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 p-3 shadow-sm;
+  }
+
+  .widget-title {
+    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .widget-value {
+    @apply mt-1 text-xl font-semibold tracking-tight text-slate-900;
+  }
+
+  .widget-muted {
+    @apply mt-1 text-xs text-slate-500;
+  }
+
+  .calc-materials {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .calc-material-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    @apply rounded-xl border border-blue-100 bg-blue-50/40 p-2;
+  }
+
+  @media (min-width: 1024px) {
+    .calc-material-row {
+      grid-template-columns: minmax(240px, 1.8fr) minmax(120px, 0.9fr) minmax(120px, 0.9fr) minmax(150px, 1fr) auto;
+      align-items: center;
+    }
+  }
+
+  .material-name {
+    min-width: 0;
+  }
+
+  .material-qty,
+  .material-price {
+    min-width: 120px;
+  }
+
+  .material-type {
+    min-width: 150px;
+  }
+
+  .material-remove {
+    white-space: nowrap;
+  }
+}

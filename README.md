@@ -5,7 +5,11 @@
 2. Import schema dan seed:
    - `docs/05-sql-schema.sql`
    - `docs/06-sql-seed-sample.sql`
-3. Jalankan server:
+3. Install frontend dependency:
+   - `npm install`
+4. Build asset Tailwind lokal:
+   - `npm run build`
+5. Jalankan server:
    - `php -S 127.0.0.1:2042 -t public public/router.php`
 
 ## URL
@@ -16,3 +20,7 @@
 
 ## Test
 - `php tests/run_calculation_engine_tests.php`
+
+## Frontend Build
+- Development watch: `npm run dev`
+- Production build: `npm run build`

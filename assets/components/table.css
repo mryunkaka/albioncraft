@@ -1,0 +1,66 @@
+@layer components {
+  .table-wrap {
+    @apply w-full max-w-full overflow-x-auto overflow-y-hidden rounded-xl border border-blue-100;
+  }
+
+  .table {
+    @apply min-w-full border-collapse bg-white;
+  }
+
+  .table th,
+  .table td {
+    @apply border-b border-blue-50 px-3 py-2 text-left text-sm text-slate-700;
+  }
+
+  .table thead th {
+    @apply bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .table-summary thead th {
+    @apply bg-gradient-to-r from-rose-700 to-red-700 text-white;
+  }
+
+  .table-summary td {
+    @apply whitespace-nowrap bg-orange-50/40;
+  }
+
+  .table-summary td.material-list {
+    @apply whitespace-pre;
+  }
+
+  .right {
+    @apply text-right;
+  }
+
+  .badge {
+    @apply inline-flex rounded-full border px-2 py-1 text-xs font-semibold;
+  }
+
+  .badge-positive {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
+  .badge-negative {
+    @apply border-red-200 bg-red-50 text-red-700;
+  }
+
+  .badge-neutral {
+    @apply border-blue-200 bg-blue-50 text-blue-700;
+  }
+
+  .details {
+    @apply mt-4 rounded-xl border border-blue-100 bg-white p-3;
+  }
+
+  .details-summary {
+    @apply cursor-pointer list-none text-sm font-semibold text-brand-700;
+  }
+
+  .details-summary::-webkit-details-marker {
+    @apply hidden;
+  }
+}

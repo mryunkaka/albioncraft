@@ -12,6 +12,13 @@
 - Pastikan `.htaccess` bisa dibaca server (permission 644) dan folder 755.
 - Siapkan deploy script sederhana + cron (lihat `docs/13-deployment-cpanel.md`).
 
+## Fase 1.2: Tailwind + Component System
+- Install Tailwind via NPM (tanpa CDN).
+- Siapkan build pipeline ke `public/assets/app.css`.
+- Pindahkan styling reusable ke `assets/components/`.
+- Pastikan view memakai class komponen tanpa inline style.
+- Status saat ini: selesai untuk calculator/auth/dashboard.
+
 ## Fase 2: Auth
 - Register user.
 - Generate referral code unik.

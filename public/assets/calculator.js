@@ -6,6 +6,15 @@
   const addMaterialBtn = document.getElementById("add-material");
   const clearBtn = document.getElementById("clear-local");
   const errorBox = document.getElementById("calc-error");
+  const helpModal = document.getElementById("help-modal");
+  const openHelpModalBtn = document.getElementById("open-help-modal");
+  const closeHelpModalBtn = document.getElementById("close-help-modal");
+  const closeHelpFooterBtn = document.getElementById("close-help-footer");
+  const closeHelpBackdrop = document.getElementById("close-help-backdrop");
+  const sidebar = document.querySelector(".app-sidebar");
+  const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+  const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+  const closeSidebarBtn = document.getElementById("close-sidebar");
 
   function el(tag, className, attrs) {
     const node = document.createElement(tag);
@@ -17,23 +26,23 @@
   }
 
   function addMaterialRow(initial) {
-    const row = el("div", "material-row");
+    const row = el("div", "calc-material-row");
 
-    const name = el("input", "input", { type: "text", placeholder: "Nama material", autocomplete: "off" });
+    const name = el("input", "input material-name", { type: "text", placeholder: "Nama material", autocomplete: "off" });
     name.value = (initial && initial.name) || "";
 
-    const qty = el("input", "input", { type: "number", step: "0.0001", placeholder: "Qty/recipe", min: "0" });
+    const qty = el("input", "input material-qty", { type: "number", step: "0.0001", placeholder: "Qty/recipe", min: "0" });
     qty.value = (initial && initial.qty_per_recipe != null) ? String(initial.qty_per_recipe) : "0";
 
-    const price = el("input", "input", { type: "number", step: "0.01", placeholder: "Buy price", min: "0" });
+    const price = el("input", "input material-price", { type: "number", step: "0.01", placeholder: "Buy price", min: "0" });
     price.value = (initial && initial.buy_price != null) ? String(initial.buy_price) : "0";
 
-    const rt = el("select", "select");
+    const rt = el("select", "select material-type");
     rt.appendChild(new Option("RETURN", "RETURN"));
     rt.appendChild(new Option("NON_RETURN", "NON_RETURN"));
     rt.value = (initial && initial.return_type) || "RETURN";
 
-    const remove = el("button", "button button-ghost", { type: "button" });
+    const remove = el("button", "button button-ghost material-remove", { type: "button" });
     remove.textContent = "Hapus";
     remove.addEventListener("click", () => {
       row.remove();
@@ -52,7 +61,7 @@
   }
 
   function reindexMaterialNames() {
-    const rows = materialsRoot.querySelectorAll(".material-row");
+    const rows = materialsRoot.querySelectorAll(".calc-material-row");
     let i = 0;
     for (const row of rows) {
       const inputs = row.querySelectorAll("input, select");
@@ -266,6 +275,42 @@
 
   addMaterialBtn.addEventListener("click", () => addMaterialRow());
 
+  function openSidebar() {
+    if (!sidebar || !sidebarBackdrop) return;
+    sidebar.classList.add("is-open");
+    sidebarBackdrop.classList.add("is-open");
+  }
+
+  function closeSidebar() {
+    if (!sidebar || !sidebarBackdrop) return;
+    sidebar.classList.remove("is-open");
+    sidebarBackdrop.classList.remove("is-open");
+  }
+
+  if (toggleSidebarBtn) toggleSidebarBtn.addEventListener("click", openSidebar);
+  if (closeSidebarBtn) closeSidebarBtn.addEventListener("click", closeSidebar);
+  if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeSidebar);
+
+  function openHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.add("is-open");
+    helpModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.remove("is-open");
+    helpModal.setAttribute("aria-hidden", "true");
+  }
+
+  if (openHelpModalBtn) openHelpModalBtn.addEventListener("click", openHelpModal);
+  if (closeHelpModalBtn) closeHelpModalBtn.addEventListener("click", closeHelpModal);
+  if (closeHelpFooterBtn) closeHelpFooterBtn.addEventListener("click", closeHelpModal);
+  if (closeHelpBackdrop) closeHelpBackdrop.addEventListener("click", closeHelpModal);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") closeHelpModal();
+  });
+
   function serializeState() {
     const fd = new FormData(form);
     const fields = {};
@@ -277,7 +322,7 @@
     }
 
     const materials = [];
-    for (const row of materialsRoot.querySelectorAll(".material-row")) {
+    for (const row of materialsRoot.querySelectorAll(".calc-material-row")) {
       const inputs = row.querySelectorAll("input, select");
       materials.push({
         name: inputs[0].value,
@@ -368,7 +413,7 @@
     const fd = new FormData(form);
 
     const materials = [];
-    for (const row of materialsRoot.querySelectorAll(".material-row")) {
+    for (const row of materialsRoot.querySelectorAll(".calc-material-row")) {
       const inputs = row.querySelectorAll("input, select");
       const name = inputs[0].value.trim();
       const qty = Number(inputs[1].value || "0");
