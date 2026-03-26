@@ -94,6 +94,10 @@ $router->get('/admin/subscription-requests', [App\Controllers\AdminSubscriptionC
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,
 ]);
+$router->get('/admin/subscription-actions', [App\Controllers\AdminSubscriptionController::class, 'actions'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+]);
 $router->post('/admin/subscription-requests/approve', [App\Controllers\AdminSubscriptionController::class, 'approve'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,

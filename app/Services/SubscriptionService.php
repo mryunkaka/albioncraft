@@ -330,4 +330,50 @@ final class SubscriptionService
 
         return ['ok' => true, 'message' => 'Request ditolak.'];
     }
+
+    /**
+     * @param array<string, mixed> $query
+     * @return array{
+     *   rows: array<int, array<string, mixed>>,
+     *   total: int,
+     *   page: int,
+     *   per_page: int,
+     *   last_page: int,
+     *   action_type: string,
+     *   q: string
+     * }
+     */
+    public function adminActionHistory(array $query): array
+    {
+        $actionType = strtoupper(trim((string) ($query['action_type'] ?? '')));
+        $allowed = [
+            'REQUEST_EXTEND',
+            'APPROVE_EXTEND',
+            'REJECT_EXTEND',
+        ];
+        if (! in_array($actionType, $allowed, true)) {
+            $actionType = '';
+        }
+
+        $keyword = trim((string) ($query['q'] ?? ''));
+        $page = max(1, (int) ($query['page'] ?? 1));
+        $perPage = (int) ($query['per_page'] ?? 30);
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 30;
+        }
+
+        $result = $this->subscriptions->paginateAdminActions($actionType, $keyword, $page, $perPage);
+        $total = (int) $result['total'];
+        $lastPage = max(1, (int) ceil($total / $perPage));
+
+        return [
+            'rows' => $result['rows'],
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'last_page' => $lastPage,
+            'action_type' => $actionType,
+            'q' => $keyword,
+        ];
+    }
 }

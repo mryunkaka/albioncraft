@@ -200,4 +200,65 @@ final class SubscriptionRepository
 
         return $result;
     }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, total: int}
+     */
+    public function paginateAdminActions(string $actionType = '', string $keyword = '', int $page = 1, int $perPage = 30): array
+    {
+        $page = max(1, $page);
+        $perPage = max(1, min($perPage, 100));
+        $offset = ($page - 1) * $perPage;
+
+        $where = ['1=1'];
+        $params = [];
+
+        if ($actionType !== '') {
+            $where[] = 'a.action_type = :action_type';
+            $params['action_type'] = $actionType;
+        }
+        if ($keyword !== '') {
+            $where[] = '(u.username LIKE :q OR u.email LIKE :q OR a.notes LIKE :q)';
+            $params['q'] = '%' . $keyword . '%';
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        $countSql = "SELECT COUNT(*)
+                     FROM admin_subscription_actions a
+                     JOIN users u ON u.id = a.user_id
+                     WHERE {$whereSql}";
+        $countStmt = $this->db->prepare($countSql);
+        foreach ($params as $k => $v) {
+            $countStmt->bindValue(':' . $k, $v);
+        }
+        $countStmt->execute();
+        $total = (int) $countStmt->fetchColumn();
+
+        $sql = "SELECT
+                    a.*,
+                    u.username,
+                    u.email,
+                    p.code AS plan_code,
+                    p.name AS plan_name
+                FROM admin_subscription_actions a
+                JOIN users u ON u.id = a.user_id
+                LEFT JOIN plans p ON p.id = a.plan_id
+                WHERE {$whereSql}
+                ORDER BY a.id DESC
+                LIMIT :limit_value OFFSET :offset_value";
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(':' . $k, $v);
+        }
+        $stmt->bindValue(':limit_value', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset_value', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return [
+            'rows' => is_array($rows) ? $rows : [],
+            'total' => $total,
+        ];
+    }
 }

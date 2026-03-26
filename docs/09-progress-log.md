@@ -102,6 +102,11 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
     - insert `subscription_logs`
     - insert `admin_subscription_actions` action `APPROVE_EXTEND`
   - reject menulis `admin_subscription_actions` action `REJECT_EXTEND`
+- Admin action history (read-only) sudah ditambahkan:
+  - halaman: `GET /admin/subscription-actions`
+  - filter: action_type + keyword + per_page
+  - pagination server-side
+  - sumber data: `admin_subscription_actions` join users/plans
 - PRO Price Data sudah naik dari placeholder ke foundation CRUD:
   - repository/service baru:
     - `ItemRepository`, `CityRepository`, `MarketPriceRepository`
@@ -178,7 +183,6 @@ php tests/run_calculation_engine_tests.php
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
 4. Tambahkan automated test untuk flow subscription/referral/admin-approval.
-5. Tambahkan halaman khusus history admin action (opsional, read-only).
-6. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
-7. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
-8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+5. Tambahkan hardening validasi input & rate limit endpoint auth sensitif.
+6. Tambahkan automated test untuk flow subscription/referral/admin-approval + market price service.
+7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

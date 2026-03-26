@@ -14,6 +14,7 @@
         <div class="header-actions">
           <a class="button button-ghost" href="/dashboard">Dashboard</a>
           <a class="button button-ghost" href="/subscription">Subscription</a>
+          <a class="button button-secondary" href="/admin/subscription-actions">Action History</a>
         </div>
       </div>
     </header>
@@ -84,4 +85,3 @@
   </div>
 </body>
 </html>
-

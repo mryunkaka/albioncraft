@@ -26,6 +26,18 @@ final class AdminSubscriptionController
         ]));
     }
 
+    public function actions(Request $request): void
+    {
+        $service = new SubscriptionService();
+        $history = $service->adminActionHistory($request->query());
+
+        Response::html(View::render('admin/subscription-actions', [
+            'history' => $history,
+            'flash_success' => Session::pullFlash('success'),
+            'flash_error' => Session::pullFlash('error'),
+        ]));
+    }
+
     public function approve(Request $request): void
     {
         $id = (int) $request->input('request_action_id', 0);
@@ -60,4 +72,3 @@ final class AdminSubscriptionController
         Response::redirect('/admin/subscription-requests');
     }
 }
-
