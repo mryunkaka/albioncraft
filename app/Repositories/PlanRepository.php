@@ -35,6 +35,17 @@ final class PlanRepository
         return $id > 0 ? $id : null;
     }
 
+    public function findFirstPlanId(): ?int
+    {
+        $stmt = $this->db->query('SELECT id FROM plans ORDER BY sort_order ASC, id ASC LIMIT 1');
+        $value = $stmt->fetchColumn();
+        if ($value === false) {
+            return null;
+        }
+        $id = (int) $value;
+        return $id > 0 ? $id : null;
+    }
+
     /**
      * @return array<string, mixed>|null
      */

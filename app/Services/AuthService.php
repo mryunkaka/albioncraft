@@ -62,7 +62,10 @@ final class AuthService
 
         $freePlanId = $this->plans->findIdByCode('FREE');
         if ($freePlanId === null) {
-            throw new RuntimeException('Plan FREE tidak ditemukan. Jalankan SQL seed terlebih dahulu.');
+            $freePlanId = $this->plans->findFirstPlanId();
+        }
+        if ($freePlanId === null) {
+            throw new RuntimeException('Data plan kosong. Jalankan SQL seed plans terlebih dahulu.');
         }
 
         if ($errors !== []) {
