@@ -23,6 +23,7 @@ Status global: in-progress (core engine & UI sudah jalan, fitur besar lain belum
 | 10-roadmap.md | done | Roadmap implementasi selesai |
 | 11-calculation-engine-strict-rules.md | done | Rules strict tersinkron dengan spreadsheet basis |
 | 12-test-case-golden-data.md | done | Golden data numerik tersinkron dengan strict rules |
+| 13-deployment-cpanel.md | done | Panduan deploy cPanel + cron + token |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
