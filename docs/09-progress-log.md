@@ -5,8 +5,8 @@ Dokumen ini dipakai sebagai handoff file utama agar AI lain atau engineer lain b
 
 ## Status Saat Ini
 Tanggal: 2026-03-26
-Fase: MVP Calculator + Auth Foundation Implemented
-Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/referral belum)
+Fase: MVP Calculator + Auth + Plan Gating Foundation
+Status global: in-progress (calculator, auth, middleware subscription/plan gating sudah jalan; referral/subscription flow bisnis masih belum)
 
 ## Checklist Dokumen
 | File | Status | Catatan |
@@ -74,6 +74,13 @@ Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/
   - router sudah support route-level middleware
   - form `login/register/logout` sudah memakai CSRF token
   - fallback runtime error view untuk kasus konfigurasi DB belum siap: `app/Views/errors/runtime.php`
+- Subscription/Plan gating foundation sudah diimplementasikan:
+  - middleware baru: `SubscriptionMiddleware`, `PlanFeatureMiddleware`
+  - service baru: `app/Services/SubscriptionService.php`
+  - plan sync saat request protected: jika expired otomatis downgrade ke FREE
+  - session auth sekarang menyimpan: `plan_code`, `plan_name`, `plan_expired_at`
+  - route protected baru: `/price-data` (feature key: `price_bulk_input`)
+  - controller/view placeholder PRO: `PriceDataController` + `app/Views/price-data/index.php`
 - Runtime foundation tambahan:
   - `app/Support/Env.php`, `Database.php`, `Session.php`, `View.php`
   - `bootstrap/app.php` sekarang load `.env` dan start session
@@ -96,7 +103,7 @@ Status global: in-progress (calculator dan auth dasar sudah jalan, subscription/
   - LocalStorage persist + tombol Clear
   - Tabel summary 1 baris (spreadsheet-like) + detail perhitungan via collapsible
   - Material list to buy bernomor + badge profit merah/hijau
-- Subscription/referral logic dan middleware plan gating masih belum.
+- Middleware plan gating sudah ada; business flow subscription/referral (extend, reward ledger, logs) masih belum.
 - Tailwind local build + assets/components convention masih belum diterapkan penuh.
 - Tailwind local build + component system sudah terpasang untuk halaman utama (calculator/auth/dashboard); migrasi halaman fitur lanjutan mengikuti fase berikutnya.
 - Deploy shared hosting (cPanel) sudah didokumentasikan di `docs/13`.
@@ -128,12 +135,13 @@ php tests/run_calculation_engine_tests.php
 ## Next Safe Continuation Point
 1. Lanjutkan bootstrap aplikasi PHP Native penuh sesuai `docs/03-project-structure.md`.
 2. Implementasikan schema database dari `docs/05-sql-schema.sql`.
-3. Hardening Auth:
-   - tambah middleware `SubscriptionMiddleware` dan `PlanFeatureMiddleware`
+3. Hardening Auth lanjutan:
    - tambah validasi/refactor flow flash error UX
    - tambah CSRF coverage untuk form lain yang nanti ditambahkan
-4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`.
-5. Tambahkan Tailwind build pipeline (NPM) dan pindahkan styling ke `assets/components/` (tanpa CDN).
-6. Implementasikan `SubscriptionMiddleware` + `PlanFeatureMiddleware`.
-7. Tambahkan halaman Subscription, Referral, dan PRO Price Data.
-8. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
+4. Implementasikan Subscription + Referral sesuai `docs/04` dan `docs/05`:
+   - `SubscriptionService` (extend/create/auto-downgrade log)
+   - `ReferralService` (create relation + reward days)
+   - repository `subscriptions`, `subscription_logs`, `referrals`, `referral_rewards`
+5. Implementasi halaman Subscription & Referral (UI + endpoint).
+6. Lanjutkan halaman PRO Price Data dari placeholder ke CRUD + pagination + search.
+7. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.

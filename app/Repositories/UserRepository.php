@@ -57,6 +57,23 @@ final class UserRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findWithPlanById(int $id): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT u.*, p.code AS plan_code, p.name AS plan_name
+             FROM users u
+             JOIN plans p ON p.id = u.plan_id
+             WHERE u.id = :id
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     public function create(array $payload): int
@@ -79,5 +96,19 @@ final class UserRepository
 
         return (int) $this->db->lastInsertId();
     }
-}
 
+    public function updatePlan(int $userId, int $planId, ?string $expiredAt): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users
+             SET plan_id = :plan_id, plan_expired_at = :plan_expired_at, updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id'
+        );
+
+        $stmt->execute([
+            'id' => $userId,
+            'plan_id' => $planId,
+            'plan_expired_at' => $expiredAt,
+        ]);
+    }
+}

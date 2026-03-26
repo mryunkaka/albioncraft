@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard - Albion Crafting Profit Calculator</title>
-  <link rel="stylesheet" href="/assets/app.css?v=20260326-9">
+  <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
 <body>
   <div class="app-main">
@@ -12,6 +12,7 @@
       <div class="header-inner">
         <div class="mobile-brand">AlbionCraft</div>
         <div class="header-actions">
+          <a class="button button-ghost" href="/price-data">Data Harga</a>
           <a class="button button-secondary" href="/calculator">Calculator</a>
           <form action="/logout" method="post">
             <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
@@ -44,14 +45,16 @@
           <div class="widget-muted">Session native PHP</div>
         </article>
         <article class="widget">
-          <div class="widget-title">Plan ID</div>
-          <div class="widget-value"><?= htmlspecialchars((string) ($user['plan_id'] ?? '-')) ?></div>
-          <div class="widget-muted">Plan feature gating menyusul</div>
+          <div class="widget-title">Plan</div>
+          <div class="widget-value"><?= htmlspecialchars((string) ($user['plan_code'] ?? '-')) ?></div>
+          <div class="widget-muted">ID: <?= htmlspecialchars((string) ($user['plan_id'] ?? '-')) ?></div>
         </article>
         <article class="widget">
           <div class="widget-title">Subscription</div>
-          <div class="widget-value">FREE</div>
-          <div class="widget-muted">Subscription module next step</div>
+          <div class="widget-value"><?= htmlspecialchars((string) ($user['plan_name'] ?? 'Free')) ?></div>
+          <div class="widget-muted">
+            Expired at: <?= htmlspecialchars((string) (($user['plan_expired_at'] ?? null) ?: '-')) ?>
+          </div>
         </article>
         <article class="widget">
           <div class="widget-title">Engine</div>
@@ -65,4 +68,3 @@
   </div>
 </body>
 </html>
-

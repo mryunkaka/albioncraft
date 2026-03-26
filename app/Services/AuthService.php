@@ -112,12 +112,17 @@ final class AuthService
             return ['ok' => false, 'errors' => ['auth' => 'Akun tidak aktif.']];
         }
 
+        $plan = $this->plans->findById((int) $user['plan_id']);
+
         Session::regenerate();
         Session::put('auth', [
             'user_id' => (int) $user['id'],
             'username' => (string) $user['username'],
             'email' => (string) $user['email'],
             'plan_id' => (int) $user['plan_id'],
+            'plan_code' => (string) ($plan['code'] ?? 'FREE'),
+            'plan_name' => (string) ($plan['name'] ?? 'Free'),
+            'plan_expired_at' => $user['plan_expired_at'] ?? null,
         ]);
 
         return ['ok' => true, 'errors' => []];
@@ -152,4 +157,3 @@ final class AuthService
         return $code;
     }
 }
-
