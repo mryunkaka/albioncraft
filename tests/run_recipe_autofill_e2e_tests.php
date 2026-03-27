@@ -59,10 +59,23 @@ try {
 
     $auth = [
         'user_id' => $userId,
+        'username' => 'e2e_user_' . $seed,
+        'email' => 'e2e_user_' . $seed . '@example.local',
+        'plan_id' => $mediumPlanId,
         'plan_code' => 'MEDIUM',
+        'plan_name' => 'Medium',
+        'plan_expired_at' => null,
     ];
 
-    $items = $autoFill->itemOptions('');
+    $items = $autoFill->itemOptions('', $auth);
+    $extractSystemId = static function ($value): int {
+        $raw = (string) $value;
+        if (str_starts_with($raw, 'system:')) {
+            return (int) substr($raw, 7);
+        }
+        return (int) $raw;
+    };
+
     $potion = null;
     foreach ($items as $item) {
         if (($item['item_code'] ?? '') === 'T4_POTION_SAMPLE') {
@@ -75,6 +88,7 @@ try {
     if (! is_array($potion)) {
         throw new \RuntimeException('Sample recipe potion tidak tersedia.');
     }
+    $potionSystemId = $extractSystemId($potion['id'] ?? 0);
 
     $findItemIdStmt = $db->prepare('SELECT id FROM items WHERE item_code = :item_code LIMIT 1');
     $findItemIdStmt->execute(['item_code' => 'TEASEL']);
@@ -89,7 +103,7 @@ try {
 
     $insertPrice->execute([
         'user_id' => $userId,
-        'item_id' => (int) $potion['id'],
+        'item_id' => $potionSystemId,
         'city_id' => 1,
         'price_type' => 'SELL',
         'price_value' => 1888,
@@ -124,7 +138,7 @@ try {
         $created['market_prices'][] = (int) $db->lastInsertId();
     }
 
-    $detail = $autoFill->recipeDetail((int) $potion['id'], 1, $userId);
+    $detail = $autoFill->recipeDetail((string) ($potion['id'] ?? ''), 1, $auth);
     assertTrue($detail['ok'] === true, 'Recipe auto-fill end-to-end harus berhasil.', $failures);
 
     $data = is_array($detail['data'] ?? null) ? $detail['data'] : [];
@@ -205,7 +219,7 @@ try {
             $outputSnapshot = [];
         }
 
-        assertTrue((int) ($row['item_id'] ?? 0) === (int) $potion['id'], 'item_id history harus mengarah ke item recipe terpilih.', $failures);
+        assertTrue((int) ($row['item_id'] ?? 0) === $potionSystemId, 'item_id history harus mengarah ke item recipe terpilih.', $failures);
         assertTrue((string) ($row['plan_code'] ?? '') === 'MEDIUM', 'plan_code row history harus MEDIUM.', $failures);
         assertTrue((string) ($row['calculation_mode'] ?? '') === 'SPREADSHEET_SIM', 'calculation_mode row history harus SPREADSHEET_SIM.', $failures);
         assertTrue((float) ($inputSnapshot['sell_price'] ?? 0) === 1888.0, 'input_snapshot sell_price harus tersimpan.', $failures);

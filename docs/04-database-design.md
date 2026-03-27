@@ -10,7 +10,7 @@ Database dirancang untuk mendukung auth, subscription, referral, kalkulasi, mark
 - Menyimpan plan aktif dan expired_at agar middleware cepat membaca status.
 
 ### plans
-- Master data plan: FREE, LITE, MEDIUM, PRO.
+- Master data plan: FREE, MEDIUM, PRO.
 
 ### plan_features
 - Menyimpan fitur yang aktif per plan.

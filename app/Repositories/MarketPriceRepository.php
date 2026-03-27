@@ -95,6 +95,96 @@ final class MarketPriceRepository
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listByUserItemAndType(int $userId, int $itemId, string $priceType): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT
+                mp.id,
+                mp.item_id,
+                mp.city_id,
+                c.code AS city_code,
+                c.name AS city_name,
+                mp.price_type,
+                mp.price_value,
+                mp.observed_at,
+                mp.notes,
+                mp.updated_at
+             FROM market_prices mp
+             LEFT JOIN cities c ON c.id = mp.city_id
+             WHERE mp.user_id = :user_id
+               AND mp.item_id = :item_id
+               AND mp.price_type = :price_type
+             ORDER BY mp.price_value ASC, mp.updated_at DESC, mp.id DESC'
+        );
+        $stmt->execute([
+            'user_id' => $userId,
+            'item_id' => $itemId,
+            'price_type' => $priceType,
+        ]);
+        $rows = $stmt->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * @param array<int, int> $itemIds
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public function listByUserItemsAndType(int $userId, array $itemIds, string $priceType): array
+    {
+        $itemIds = array_values(array_unique(array_filter(array_map('intval', $itemIds), static fn (int $id): bool => $id > 0)));
+        if ($itemIds === []) {
+            return [];
+        }
+
+        $params = [
+            'user_id' => $userId,
+            'price_type' => $priceType,
+        ];
+        $placeholders = [];
+        foreach ($itemIds as $index => $itemId) {
+            $key = 'item_' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $itemId;
+        }
+
+        $sql = 'SELECT
+                    mp.id,
+                    mp.item_id,
+                    mp.city_id,
+                    c.code AS city_code,
+                    c.name AS city_name,
+                    mp.price_type,
+                    mp.price_value,
+                    mp.observed_at,
+                    mp.notes,
+                    mp.updated_at
+                FROM market_prices mp
+                LEFT JOIN cities c ON c.id = mp.city_id
+                WHERE mp.user_id = :user_id
+                  AND mp.price_type = :price_type
+                  AND mp.item_id IN (' . implode(', ', $placeholders) . ')
+                ORDER BY mp.item_id ASC, mp.price_value ASC, mp.updated_at DESC, mp.id DESC';
+
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        $grouped = [];
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                $grouped[(int) ($row['item_id'] ?? 0)][] = $row;
+            }
+        }
+
+        return $grouped;
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function findOneByUnique(int $userId, int $itemId, ?int $cityId, string $priceType): ?array

@@ -55,15 +55,22 @@ $router->get('/calculator', [App\Controllers\CalculatorController::class, 'index
 $router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'calculate'], [
     App\Middleware\ApiRateLimitMiddleware::class,
 ]);
-$router->get('/api/calculator/recipes/items', [App\Controllers\CalculatorController::class, 'recipeItems'], [
+$router->get('/api/calculator/recipes/items', [App\Controllers\CalculatorController::class, 'recipeItems']);
+$router->get('/api/calculator/recipes/detail', [App\Controllers\CalculatorController::class, 'recipeDetail']);
+$router->post('/api/calculator/craft-fee/save', [App\Controllers\CalculatorController::class, 'saveCraftFee'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,
-    App\Middleware\PlanFeatureMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
 ]);
-$router->get('/api/calculator/recipes/detail', [App\Controllers\CalculatorController::class, 'recipeDetail'], [
+$router->post('/api/calculator/sell-price/save', [App\Controllers\CalculatorController::class, 'saveSellPrice'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,
-    App\Middleware\PlanFeatureMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/api/calculator/material-prices/save', [App\Controllers\CalculatorController::class, 'saveMaterialPrices'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
 ]);
 $router->get('/login', [App\Controllers\AuthController::class, 'showLogin'], [
     App\Middleware\GuestMiddleware::class,
@@ -143,12 +150,31 @@ $router->get('/admin/subscription-actions', [App\Controllers\AdminSubscriptionCo
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,
 ]);
+$router->get('/admin/users', [App\Controllers\AdminUserManagementController::class, 'index'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+]);
 $router->post('/admin/subscription-requests/approve', [App\Controllers\AdminSubscriptionController::class, 'approve'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
 $router->post('/admin/subscription-requests/reject', [App\Controllers\AdminSubscriptionController::class, 'reject'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/admin/users/profile', [App\Controllers\AdminUserManagementController::class, 'updateProfile'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/admin/users/password', [App\Controllers\AdminUserManagementController::class, 'updatePassword'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
+$router->post('/admin/users/plan', [App\Controllers\AdminUserManagementController::class, 'updatePlan'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\AdminMiddleware::class,
     App\Middleware\CsrfMiddleware::class,

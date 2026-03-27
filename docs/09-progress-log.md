@@ -303,3 +303,4 @@ php tests/run_all_tests.php
    - throttling endpoint API sensitif non-auth sudah diterapkan untuk `POST /api/calculate`
 4. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
 5. Jalankan final verification memakai `docs/18-final-pre-release-checklist.md` setelah QA manual selesai.
+- 2026-03-27: calculator market-intelligence diperluas. User login sekarang bisa simpan `CRAFT_FEE`, `SELL`, dan harga `BUY` material langsung dari calculator, lalu recipe auto-fill menampilkan rekomendasi kota craft termurah, kota jual tertinggi, bonus local tersedia, dan kota beli material termurah.

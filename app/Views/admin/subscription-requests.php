@@ -6,20 +6,10 @@
   <title>Admin Subscription Requests</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft Admin</div>
-        <div class="header-actions">
-          <a class="button button-ghost" href="/dashboard">Dashboard</a>
-          <a class="button button-ghost" href="/subscription">Subscription</a>
-          <a class="button button-secondary" href="/admin/subscription-actions">Action History</a>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$header_title = 'AlbionCraft Admin';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Admin - Pending Subscription Requests</h1>
         <p class="page-subtitle">Approve/reject request extend manual admin v1.</p>
@@ -81,7 +71,4 @@
           </table>
         </div>
       </section>
-    </main>
-  </div>
-</body>
-</html>
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

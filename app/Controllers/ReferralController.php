@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\ReferralService;
 use App\Support\Csrf;
+use App\Support\AdminAccess;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -26,12 +27,13 @@ final class ReferralController
         $overview = $service->overview((int) $auth['user_id']);
 
         Response::html(View::render('referral/index', [
+            'auth' => $auth,
             'user' => Session::get('auth'),
             'overview' => $overview,
+            'is_admin' => AdminAccess::isAdminEmail((string) ($auth['email'] ?? '')),
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),
         ]));
     }
 }
-

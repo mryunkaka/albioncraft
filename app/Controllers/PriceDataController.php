@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\MarketPriceService;
 use App\Support\Csrf;
+use App\Support\AdminAccess;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -25,9 +26,11 @@ final class PriceDataController
         $service = new MarketPriceService();
 
         Response::html(View::render('price-data/index', [
+            'auth' => $auth,
             'user' => $auth,
             'cities' => $service->cityOptions(),
             'item_options' => $service->itemOptions(),
+            'is_admin' => AdminAccess::isAdminEmail((string) ($auth['email'] ?? '')),
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),

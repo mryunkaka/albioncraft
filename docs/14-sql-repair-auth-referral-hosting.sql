@@ -26,9 +26,8 @@ WHERE u1.id IS NULL OR u2.id IS NULL;
 -- 3) Normalisasi plans + seed minimum
 INSERT INTO plans (code, name, sort_order) VALUES
 ('FREE', 'Free', 1),
-('LITE', 'Lite', 2),
-('MEDIUM', 'Medium', 3),
-('PRO', 'Pro', 4)
+('MEDIUM', 'Medium', 2),
+('PRO', 'Pro', 3)
 ON DUPLICATE KEY UPDATE
 name = VALUES(name),
 sort_order = VALUES(sort_order);

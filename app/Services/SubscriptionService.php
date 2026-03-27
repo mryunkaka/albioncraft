@@ -127,8 +127,12 @@ final class SubscriptionService
         }
 
         $durationType = strtoupper(trim($durationType));
-        $days = self::DURATIONS[$durationType] ?? null;
-        if ($days === null) {
+        $days = 0;
+        if (strtoupper((string) ($plan['code'] ?? '')) !== 'FREE') {
+            $days = self::DURATIONS[$durationType] ?? null;
+        }
+
+        if (strtoupper((string) ($plan['code'] ?? '')) !== 'FREE' && $days === null) {
             return ['ok' => false, 'message' => 'Durasi tidak valid.'];
         }
 
@@ -136,15 +140,19 @@ final class SubscriptionService
             'user_id' => $userId,
             'action_type' => 'REQUEST_EXTEND',
             'plan_id' => (int) $plan['id'],
-            'duration_type' => $durationType,
-            'duration_days' => $days,
+            'duration_type' => strtoupper((string) ($plan['code'] ?? '')) === 'FREE' ? null : $durationType,
+            'duration_days' => strtoupper((string) ($plan['code'] ?? '')) === 'FREE' ? null : $days,
             'actor_label' => 'USER',
-            'notes' => 'Request extend dari halaman Subscription (manual admin v1).',
+            'notes' => strtoupper((string) ($plan['code'] ?? '')) === 'FREE'
+                ? 'Request change plan ke FREE dari halaman Subscription.'
+                : 'Request extend dari halaman Subscription (manual admin v1).',
         ]);
 
         return [
             'ok' => true,
-            'message' => 'Request extend tersimpan. Menunggu aktivasi admin.',
+            'message' => strtoupper((string) ($plan['code'] ?? '')) === 'FREE'
+                ? 'Request ganti plan ke FREE tersimpan. Menunggu aktivasi admin.'
+                : 'Request extend tersimpan. Menunggu aktivasi admin.',
         ];
     }
 
@@ -240,7 +248,7 @@ final class SubscriptionService
         $planId = (int) ($request['plan_id'] ?? 0);
         $durationDays = (int) ($request['duration_days'] ?? 0);
         $durationType = (string) (($request['duration_type'] ?? 'DAYS'));
-        if ($userId <= 0 || $planId <= 0 || $durationDays <= 0) {
+        if ($userId <= 0 || $planId <= 0) {
             return ['ok' => false, 'message' => 'Data request tidak valid.'];
         }
 
@@ -249,9 +257,59 @@ final class SubscriptionService
             return ['ok' => false, 'message' => 'User tidak ditemukan.'];
         }
 
+        $targetPlan = $this->plans->findById($planId);
+        if ($targetPlan === null) {
+            return ['ok' => false, 'message' => 'Plan tujuan tidak ditemukan.'];
+        }
+
         $oldPlanId = (int) $user['plan_id'];
         $oldExpiredAt = is_string($user['plan_expired_at'] ?? null) ? (string) $user['plan_expired_at'] : null;
         $now = new DateTimeImmutable('now');
+
+        if (strtoupper((string) ($targetPlan['code'] ?? '')) === 'FREE') {
+            $this->users->updatePlan($userId, $planId, null);
+
+            $subscriptionId = $this->subscriptions->create([
+                'user_id' => $userId,
+                'plan_id' => $planId,
+                'duration_type' => 'FREE',
+                'duration_days' => 0,
+                'started_at' => $now->format('Y-m-d H:i:s'),
+                'expired_at' => $now->format('Y-m-d H:i:s'),
+                'status' => 'ACTIVE',
+                'source_type' => 'MANUAL_ADMIN',
+                'source_reference' => (string) $requestActionId,
+                'notes' => 'Approved change to FREE from request #' . $requestActionId,
+            ]);
+
+            $this->subscriptions->createLog([
+                'subscription_id' => $subscriptionId,
+                'user_id' => $userId,
+                'action_type' => $oldPlanId === $planId ? 'EXTEND' : 'CHANGE_PLAN',
+                'old_plan_id' => $oldPlanId,
+                'new_plan_id' => $planId,
+                'old_expired_at' => $oldExpiredAt,
+                'new_expired_at' => null,
+                'actor_label' => $actorLabel,
+                'notes' => 'Approval request #' . $requestActionId . ' ke FREE',
+            ]);
+
+            $this->subscriptions->createAdminAction([
+                'user_id' => $userId,
+                'action_type' => 'APPROVE_EXTEND',
+                'plan_id' => $planId,
+                'duration_type' => null,
+                'duration_days' => null,
+                'actor_label' => $actorLabel,
+                'notes' => 'request_action_id=' . $requestActionId,
+            ]);
+
+            return ['ok' => true, 'message' => 'Request FREE berhasil di-approve.'];
+        }
+
+        if ($durationDays <= 0) {
+            return ['ok' => false, 'message' => 'Data request tidak valid.'];
+        }
 
         $baseStart = $now;
         if ($oldExpiredAt !== null && trim($oldExpiredAt) !== '') {
@@ -350,6 +408,9 @@ final class SubscriptionService
             'REQUEST_EXTEND',
             'APPROVE_EXTEND',
             'REJECT_EXTEND',
+            'MANAGE_USER_PROFILE',
+            'MANAGE_USER_PASSWORD',
+            'MANAGE_USER_PLAN',
         ];
         if (! in_array($actionType, $allowed, true)) {
             $actionType = '';

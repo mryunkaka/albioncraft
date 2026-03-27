@@ -113,3 +113,4 @@
   - status saat ini: panduan baca market + mapping ke calculator tersedia di `docs/17-market-analysis-guide.md`
 - Release readiness
   - checklist final tersedia di `docs/18-final-pre-release-checklist.md`
+- 2026-03-27: market recommendation foundation selesai di calculator. Hardening lanjutan jika diperlukan: evaluasi formula rekomendasi kota craft lintas-city vs workflow spreadsheet/manual market yang lebih detail.

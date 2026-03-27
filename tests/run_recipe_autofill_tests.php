@@ -16,6 +16,7 @@ $failures = [];
 $created = [
     'users' => [],
     'market_prices' => [],
+    'saved_recipes' => [],
 ];
 
 /**
@@ -36,8 +37,12 @@ try {
 
     $plans->ensureDefaultPlans();
     $freePlanId = $plans->findIdByCode('FREE');
+    $proPlanId = $plans->findIdByCode('PRO');
     if ($freePlanId === null || $freePlanId <= 0) {
         throw new \RuntimeException('FREE plan tidak ditemukan.');
+    }
+    if ($proPlanId === null || $proPlanId <= 0) {
+        throw new \RuntimeException('PRO plan tidak ditemukan.');
     }
 
     $seed = (string) time() . '_' . substr(bin2hex(random_bytes(4)), 0, 8);
@@ -52,8 +57,38 @@ try {
         'status' => 'ACTIVE',
     ]);
     $created['users'][] = $userId;
+    $proUserId = $users->create([
+        'username' => 'raf_pro_' . $seed,
+        'email' => 'raf_pro_' . $seed . '@example.local',
+        'password_hash' => password_hash('TestPass123!', PASSWORD_DEFAULT),
+        'referral_code' => strtoupper(substr(bin2hex(random_bytes(8)), 0, 10)),
+        'referred_by_code' => null,
+        'plan_id' => $proPlanId,
+        'plan_expired_at' => null,
+        'status' => 'ACTIVE',
+    ]);
+    $created['users'][] = $proUserId;
 
-    $items = $service->itemOptions('');
+    $freeAuth = [
+        'user_id' => $userId,
+        'username' => 'raf_user_' . $seed,
+        'email' => 'raf_user_' . $seed . '@example.local',
+        'plan_id' => $freePlanId,
+        'plan_code' => 'FREE',
+        'plan_name' => 'Free',
+        'plan_expired_at' => null,
+    ];
+    $proAuth = [
+        'user_id' => $proUserId,
+        'username' => 'raf_pro_' . $seed,
+        'email' => 'raf_pro_' . $seed . '@example.local',
+        'plan_id' => $proPlanId,
+        'plan_code' => 'PRO',
+        'plan_name' => 'Pro',
+        'plan_expired_at' => null,
+    ];
+
+    $items = $service->itemOptions('', $freeAuth);
     expectOk(count($items) >= 3, 'Item options recipe harus mengembalikan minimal 3 sample seed.', $failures);
 
     $leatherT3 = null;
@@ -76,7 +111,7 @@ try {
     expectOk(is_array($helmet), 'Sample LEATHER_HELMET_T4 tidak ditemukan di recipe item options.', $failures);
 
     if (is_array($leatherT3)) {
-        $detail = $service->recipeDetail((int) $leatherT3['id'], null, $userId);
+        $detail = $service->recipeDetail((string) $leatherT3['id'], null, $freeAuth);
         expectOk($detail['ok'] === true, 'Recipe detail LEATHER_T3 harus sukses.', $failures);
         $data = $detail['data'] ?? [];
         $materials = is_array($data['materials'] ?? null) ? $data['materials'] : [];
@@ -85,10 +120,18 @@ try {
         expectOk((float) (($data['city_bonus']['bonus_percent'] ?? 0)) === 0.0, 'Tanpa city, bonus local harus 0.', $failures);
     }
 
-    $findItemIdByCode = static function (array $rows, string $itemCode): int {
+    $extractSystemId = static function ($value): int {
+        $raw = (string) $value;
+        if (str_starts_with($raw, 'system:')) {
+            return (int) substr($raw, 7);
+        }
+        return (int) $raw;
+    };
+
+    $findItemIdByCode = static function (array $rows, string $itemCode) use ($extractSystemId): int {
         foreach ($rows as $row) {
             if (($row['item_code'] ?? '') === $itemCode) {
-                return (int) ($row['id'] ?? 0);
+                return $extractSystemId($row['id'] ?? 0);
             }
         }
         return 0;
@@ -132,6 +175,17 @@ try {
             'notes' => 'test city sell potion',
         ]);
         $created['market_prices'][] = (int) $db->lastInsertId();
+
+        $insertPrice->execute([
+            'user_id' => $userId,
+            'item_id' => $potionId,
+            'city_id' => 1,
+            'price_type' => 'CRAFT_FEE',
+            'price_value' => 275,
+            'observed_at' => '2026-03-27 10:06:00',
+            'notes' => 'test city craft fee potion',
+        ]);
+        $created['market_prices'][] = (int) $db->lastInsertId();
     }
 
     if ($teaselId > 0) {
@@ -161,19 +215,41 @@ try {
     }
 
     if (is_array($potion)) {
-        $detail = $service->recipeDetail((int) $potion['id'], 1, $userId);
+        $detail = $service->recipeDetail((string) $potion['id'], 1, $freeAuth);
         expectOk($detail['ok'] === true, 'Recipe detail potion harus sukses.', $failures);
         $data = $detail['data'] ?? [];
         $materials = is_array($data['materials'] ?? null) ? $data['materials'] : [];
         expectOk((int) (($data['item']['output_qty'] ?? 0)) === 10, 'Output qty potion sample harus 10.', $failures);
         expectOk((float) (($data['city_bonus']['bonus_percent'] ?? -1)) === 15.0, 'Bonus city potion Brecilien harus 15.', $failures);
         expectOk((float) (($data['item']['sell_price'] ?? 0)) === 1888.0, 'Sell price potion harus auto-fill dari market price city.', $failures);
+        expectOk((float) (($data['item']['craft_fee'] ?? 0)) === 275.0, 'Craft fee potion harus auto-fill dari data kota terpilih.', $failures);
         expectOk(isset($materials[0]['buy_price']) && (float) $materials[0]['buy_price'] === 444.0, 'Material pertama potion harus fallback ke BUY global.', $failures);
         expectOk(isset($materials[1]['buy_price']) && (float) $materials[1]['buy_price'] === 555.0, 'Material kedua potion harus pakai BUY city.', $failures);
+        $recommendations = is_array($data['recommendations'] ?? null) ? $data['recommendations'] : [];
+        expectOk(
+            isset($recommendations['best_sell_city']['price_value']) && (float) $recommendations['best_sell_city']['price_value'] === 1888.0,
+            'Recommendation best sell city harus menemukan harga jual tertinggi.',
+            $failures
+        );
+        expectOk(
+            isset($recommendations['best_craft_fee_city']['price_value']) && (float) $recommendations['best_craft_fee_city']['price_value'] === 275.0,
+            'Recommendation best craft fee city harus menemukan craft fee termurah.',
+            $failures
+        );
+        expectOk(
+            isset($recommendations['recommended_craft_city']['city_id']) && (int) $recommendations['recommended_craft_city']['city_id'] === 1,
+            'Recommendation recommended craft city harus terisi.',
+            $failures
+        );
+        expectOk(
+            isset($recommendations['local_bonus_cities'][0]['bonus_percent']) && (float) $recommendations['local_bonus_cities'][0]['bonus_percent'] >= 15.0,
+            'Recommendation local bonus cities harus terisi.',
+            $failures
+        );
     }
 
     if (is_array($helmet)) {
-        $detail = $service->recipeDetail((int) $helmet['id'], 5, $userId);
+        $detail = $service->recipeDetail((string) $helmet['id'], 5, $freeAuth);
         expectOk($detail['ok'] === true, 'Recipe detail helmet harus sukses.', $failures);
         $data = $detail['data'] ?? [];
         $materials = is_array($data['materials'] ?? null) ? $data['materials'] : [];
@@ -185,6 +261,89 @@ try {
         );
     }
 
+    $guestRecipeId = $service->storeCalculatedRecipe(null, [
+        'item_name' => 'Guest Shared T4',
+        'item_value' => 180,
+        'output_qty' => 10,
+        'usage_fee' => 220,
+        'bonus_local' => 15,
+        'materials' => [
+            ['name' => 'Teasel', 'qty_per_recipe' => 4, 'buy_price' => 444, 'return_type' => 'RETURN'],
+        ],
+    ]);
+    if ($guestRecipeId !== null) {
+        $created['saved_recipes'][] = $guestRecipeId;
+    }
+
+    $userRecipeId = $service->storeCalculatedRecipe($freeAuth, [
+        'item_name' => 'My Free Recipe',
+        'item_value' => 240,
+        'output_qty' => 1,
+        'usage_fee' => 150,
+        'sell_price' => 999,
+        'materials' => [
+            ['name' => 'Leather T3', 'qty_per_recipe' => 8, 'buy_price' => 500, 'return_type' => 'RETURN'],
+        ],
+    ]);
+    if ($userRecipeId !== null) {
+        $created['saved_recipes'][] = $userRecipeId;
+    }
+
+    usleep(1000000);
+    $userRecipeV2Id = $service->storeCalculatedRecipe($freeAuth, [
+        'item_name' => 'My Free Recipe',
+        'item_value' => 250,
+        'output_qty' => 1,
+        'usage_fee' => 175,
+        'sell_price' => 1111,
+        'materials' => [
+            ['name' => 'Leather T3', 'qty_per_recipe' => 8, 'buy_price' => 550, 'return_type' => 'RETURN'],
+        ],
+    ]);
+    if ($userRecipeV2Id !== null) {
+        $created['saved_recipes'][] = $userRecipeV2Id;
+    }
+
+    $guestOptions = $service->itemOptions('Guest Shared', null);
+    expectOk(
+        count(array_filter($guestOptions, static fn (array $row): bool => (string) ($row['source'] ?? '') === 'saved')) === 1,
+        'Guest hanya boleh melihat saved recipe bucket tanpa login miliknya.',
+        $failures
+    );
+
+    $freeOptions = $service->itemOptions('My Free Recipe', $freeAuth);
+    $freeSavedRows = array_values(array_filter($freeOptions, static fn (array $row): bool => (string) ($row['source'] ?? '') === 'saved'));
+    expectOk(count($freeSavedRows) === 1, 'FREE hanya boleh melihat latest saved recipe miliknya sendiri.', $failures);
+    expectOk(
+        count(array_filter($freeOptions, static fn (array $row): bool => str_contains((string) ($row['label'] ?? ''), 'Tanpa Login'))) === 0,
+        'FREE tidak boleh melihat saved recipe dari Tanpa Login.',
+        $failures
+    );
+
+    if ($userRecipeV2Id !== null) {
+        $savedDetail = $service->recipeDetail('saved:' . $userRecipeV2Id, null, $freeAuth);
+        expectOk($savedDetail['ok'] === true, 'Detail saved recipe milik FREE harus bisa diambil.', $failures);
+        expectOk(
+            isset($savedDetail['data']['item']['sell_price']) && (float) $savedDetail['data']['item']['sell_price'] === 1111.0,
+            'Detail saved recipe harus memakai snapshot terbaru.',
+            $failures
+        );
+    }
+
+    $proOptions = $service->itemOptions('', $proAuth);
+    $proSavedRows = array_values(array_filter($proOptions, static fn (array $row): bool => (string) ($row['source'] ?? '') === 'saved'));
+    expectOk(count($proSavedRows) >= 3, 'PRO harus bisa melihat semua saved recipe lintas user/guest.', $failures);
+    expectOk(
+        count(array_filter($proSavedRows, static fn (array $row): bool => str_contains((string) ($row['label'] ?? ''), 'Tanpa Login'))) >= 1,
+        'PRO harus bisa melihat saved recipe dari Tanpa Login.',
+        $failures
+    );
+
+    if ($created['saved_recipes'] !== []) {
+        $savedCsv = implode(',', array_map(static fn (int $id): string => (string) $id, $created['saved_recipes']));
+        $db->exec("DELETE FROM calculator_recipe_library WHERE id IN ({$savedCsv})");
+    }
+
     if ($created['market_prices'] !== []) {
         $idCsv = implode(',', array_map(static fn (int $id): string => (string) $id, $created['market_prices']));
         $db->exec("DELETE FROM market_prices WHERE id IN ({$idCsv})");
@@ -192,6 +351,7 @@ try {
 
     if ($created['users'] !== []) {
         $idCsv = implode(',', array_map(static fn (int $id): string => (string) $id, $created['users']));
+        $db->exec("DELETE FROM calculator_recipe_library WHERE user_id IN ({$idCsv})");
         $db->exec("DELETE FROM market_prices WHERE user_id IN ({$idCsv})");
         $db->exec("DELETE FROM calculation_histories WHERE user_id IN ({$idCsv})");
         $db->exec("DELETE FROM admin_subscription_actions WHERE user_id IN ({$idCsv})");

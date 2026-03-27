@@ -6,24 +6,10 @@
   <title>Data Harga - Albion Crafting Profit Calculator</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft</div>
-        <div class="header-actions">
-          <a class="button button-ghost" href="/dashboard">Dashboard</a>
-          <a class="button button-ghost" href="/subscription">Subscription</a>
-          <a class="button button-secondary" href="/calculator">Calculator</a>
-          <form action="/logout" method="post">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
-            <button class="button button-ghost" type="submit">Logout</button>
-          </form>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$header_title = 'Albion Crafting Profit Calculator';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Data Harga (PRO)</h1>
         <p class="page-subtitle">Search, filter, pagination server-side, dan simpan/update harga item.</p>
@@ -76,6 +62,7 @@
               <select class="select" name="price_type" required>
                 <option value="BUY">BUY</option>
                 <option value="SELL">SELL</option>
+                <option value="CRAFT_FEE">CRAFT_FEE</option>
               </select>
             </label>
 
@@ -134,6 +121,7 @@
                 <option value="">Semua</option>
                 <option value="BUY">BUY</option>
                 <option value="SELL">SELL</option>
+                <option value="CRAFT_FEE">CRAFT_FEE</option>
               </select>
             </label>
             <label class="field">
@@ -194,5 +182,4 @@
     };
   </script>
   <script src="/assets/price-data.js?v=20260326-2"></script>
-</body>
-</html>
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

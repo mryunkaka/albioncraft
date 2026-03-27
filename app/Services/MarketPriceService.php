@@ -37,7 +37,7 @@ final class MarketPriceService
     {
         $keyword = trim((string) ($query['q'] ?? ''));
         $priceType = strtoupper(trim((string) ($query['price_type'] ?? '')));
-        if (! in_array($priceType, ['BUY', 'SELL'], true)) {
+        if (! in_array($priceType, ['BUY', 'SELL', 'CRAFT_FEE'], true)) {
             $priceType = '';
         }
         $cityId = (int) ($query['city_id'] ?? 0);
@@ -77,8 +77,8 @@ final class MarketPriceService
         if ($itemId <= 0) {
             return ['ok' => false, 'message' => 'Item wajib dipilih.'];
         }
-        if (! in_array($priceType, ['BUY', 'SELL'], true)) {
-            return ['ok' => false, 'message' => 'Price type harus BUY atau SELL.'];
+        if (! in_array($priceType, ['BUY', 'SELL', 'CRAFT_FEE'], true)) {
+            return ['ok' => false, 'message' => 'Price type harus BUY, SELL, atau CRAFT_FEE.'];
         }
         if ($priceValue < 0) {
             return ['ok' => false, 'message' => 'Price value tidak boleh negatif.'];
@@ -271,8 +271,8 @@ final class MarketPriceService
                     }
                 }
 
-                if (! in_array($priceType, ['BUY', 'SELL'], true)) {
-                    $errors[] = 'Baris ' . $row['line'] . ': price type harus BUY atau SELL.';
+                if (! in_array($priceType, ['BUY', 'SELL', 'CRAFT_FEE'], true)) {
+                    $errors[] = 'Baris ' . $row['line'] . ': price type harus BUY, SELL, atau CRAFT_FEE.';
                     continue;
                 }
 

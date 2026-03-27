@@ -37,6 +37,34 @@ final class UserRepository
     /**
      * @return array<string, mixed>|null
      */
+    public function findByEmailExcludingId(string $email, int $excludeUserId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE email = :email AND id <> :id LIMIT 1');
+        $stmt->execute([
+            'email' => strtolower(trim($email)),
+            'id' => $excludeUserId,
+        ]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findByUsernameExcludingId(string $username, int $excludeUserId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE username = :username AND id <> :id LIMIT 1');
+        $stmt->execute([
+            'username' => trim($username),
+            'id' => $excludeUserId,
+        ]);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByReferralCode(string $referralCode): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE referral_code = :code LIMIT 1');
@@ -123,5 +151,97 @@ final class UserRepository
             'plan_id' => $planId,
             'plan_expired_at' => $expiredAt,
         ]);
+    }
+
+    public function updateProfile(int $userId, string $username, string $email, string $status): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users
+             SET username = :username,
+                 email = :email,
+                 status = :status,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $userId,
+            'username' => trim($username),
+            'email' => strtolower(trim($email)),
+            'status' => strtoupper(trim($status)),
+        ]);
+    }
+
+    public function updatePasswordHash(int $userId, string $passwordHash): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users
+             SET password_hash = :password_hash, updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $userId,
+            'password_hash' => $passwordHash,
+        ]);
+    }
+
+    /**
+     * @return array{rows: array<int, array<string, mixed>>, total: int}
+     */
+    public function paginateWithPlan(string $keyword = '', string $status = '', int $page = 1, int $perPage = 20): array
+    {
+        $page = max(1, $page);
+        $perPage = max(1, min($perPage, 100));
+        $offset = ($page - 1) * $perPage;
+
+        $where = ['1=1'];
+        $params = [];
+
+        if ($keyword !== '') {
+            $where[] = '(u.username LIKE :q OR u.email LIKE :q OR u.referral_code LIKE :q)';
+            $params['q'] = '%' . $keyword . '%';
+        }
+
+        if ($status !== '') {
+            $where[] = 'u.status = :status';
+            $params['status'] = strtoupper(trim($status));
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*)
+             FROM users u
+             JOIN plans p ON p.id = u.plan_id
+             WHERE {$whereSql}"
+        );
+        foreach ($params as $key => $value) {
+            $countStmt->bindValue(':' . $key, $value);
+        }
+        $countStmt->execute();
+        $total = (int) $countStmt->fetchColumn();
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                u.*,
+                p.code AS plan_code,
+                p.name AS plan_name
+             FROM users u
+             JOIN plans p ON p.id = u.plan_id
+             WHERE {$whereSql}
+             ORDER BY u.id DESC
+             LIMIT :limit_value OFFSET :offset_value"
+        );
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit_value', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset_value', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll();
+
+        return [
+            'rows' => is_array($rows) ? $rows : [],
+            'total' => $total,
+        ];
     }
 }

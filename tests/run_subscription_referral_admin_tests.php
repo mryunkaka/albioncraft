@@ -7,6 +7,7 @@ require dirname(__DIR__) . '/bootstrap/autoload.php';
 use App\Repositories\PlanRepository;
 use App\Repositories\ReferralRepository;
 use App\Repositories\UserRepository;
+use App\Services\AdminUserManagementService;
 use App\Services\ReferralService;
 use App\Services\SubscriptionService;
 use App\Support\Database;
@@ -32,6 +33,7 @@ try {
     $plans = new PlanRepository($db);
     $users = new UserRepository($db);
     $subscriptionService = new SubscriptionService();
+    $adminUserService = new AdminUserManagementService();
     $referralService = new ReferralService();
 
     $plans->ensureDefaultPlans();
@@ -170,7 +172,38 @@ try {
         assertTrue(! $stillPending, 'Request yang sudah direject masih tampil di pending list.', $failures);
     }
 
-    // Test 4: expiry auto-downgrade to FREE
+    // Test 4: request FREE tanpa durasi dan approve harus clear expiry
+    $requestFree = $subscriptionService->requestExtend($referredId, 'FREE', '');
+    assertTrue($requestFree['ok'] === true, 'Request FREE gagal: ' . $requestFree['message'], $failures);
+
+    $pendingFree = $subscriptionService->pendingRequests(200);
+    $freeActionId = 0;
+    foreach ($pendingFree as $row) {
+        if ((int) ($row['user_id'] ?? 0) === $referredId && (string) (($row['plan_code'] ?? '')) === 'FREE') {
+            $freeActionId = (int) ($row['id'] ?? 0);
+            break;
+        }
+    }
+    assertTrue($freeActionId > 0, 'Pending request FREE tidak ditemukan.', $failures);
+
+    if ($freeActionId > 0) {
+        $approveFree = $subscriptionService->approveRequest($freeActionId, 'admin-test@example.local');
+        assertTrue($approveFree['ok'] === true, 'Approve FREE request gagal: ' . $approveFree['message'], $failures);
+    }
+
+    $referredAfterFree = $users->findWithPlanById($referredId);
+    assertTrue(
+        is_array($referredAfterFree) && strtoupper((string) ($referredAfterFree['plan_code'] ?? '')) === 'FREE',
+        'Plan user tidak berubah ke FREE setelah approve FREE request.',
+        $failures
+    );
+    assertTrue(
+        is_array($referredAfterFree) && empty($referredAfterFree['plan_expired_at']),
+        'Plan expiry user harus kosong setelah approve FREE request.',
+        $failures
+    );
+
+    // Test 5: expiry auto-downgrade to FREE
     $yesterday = (new \DateTimeImmutable('now'))->modify('-1 day')->format('Y-m-d H:i:s');
     $users->updatePlan($referredId, $proPlanId, $yesterday);
 
@@ -181,6 +214,96 @@ try {
         'Auto-downgrade ke FREE tidak berjalan saat expired.',
         $failures
     );
+
+    // Test 6: admin user management profile update
+    $profileUpdate = $adminUserService->updateProfile(
+        $referredId,
+        'managed_' . $seed,
+        'managed_' . $seed . '@example.local',
+        'INACTIVE',
+        'admin-test@example.local'
+    );
+    assertTrue($profileUpdate['ok'] === true, 'Update profile admin gagal: ' . $profileUpdate['message'], $failures);
+
+    $managedAfterProfile = $users->findWithPlanById($referredId);
+    assertTrue(
+        is_array($managedAfterProfile) && (string) ($managedAfterProfile['email'] ?? '') === 'managed_' . $seed . '@example.local',
+        'Email user tidak berubah lewat admin user management.',
+        $failures
+    );
+    assertTrue(
+        is_array($managedAfterProfile) && (string) ($managedAfterProfile['status'] ?? '') === 'INACTIVE',
+        'Status user tidak berubah lewat admin user management.',
+        $failures
+    );
+
+    // Test 7: admin reset password
+    $passwordUpdate = $adminUserService->resetPassword(
+        $referredId,
+        'AdminReset123!',
+        'AdminReset123!',
+        'admin-test@example.local'
+    );
+    assertTrue($passwordUpdate['ok'] === true, 'Reset password admin gagal: ' . $passwordUpdate['message'], $failures);
+
+    $managedAfterPassword = $users->findById($referredId);
+    assertTrue(
+        is_array($managedAfterPassword) && password_verify('AdminReset123!', (string) ($managedAfterPassword['password_hash'] ?? '')),
+        'Password hash user tidak berubah lewat admin user management.',
+        $failures
+    );
+
+    // Test 8: admin downgrade / upgrade plan direct
+    $planUpdateFree = $adminUserService->updatePlan(
+        $referredId,
+        'FREE',
+        '',
+        'admin-test@example.local'
+    );
+    assertTrue($planUpdateFree['ok'] === true, 'Downgrade FREE admin gagal: ' . $planUpdateFree['message'], $failures);
+
+    $managedAfterFree = $users->findWithPlanById($referredId);
+    assertTrue(
+        is_array($managedAfterFree) && strtoupper((string) ($managedAfterFree['plan_code'] ?? '')) === 'FREE',
+        'Plan user tidak downgrade ke FREE lewat admin user management.',
+        $failures
+    );
+    assertTrue(
+        is_array($managedAfterFree) && empty($managedAfterFree['plan_expired_at']),
+        'Expiry harus kosong setelah downgrade FREE lewat admin user management.',
+        $failures
+    );
+
+    $futureExpiry = (new \DateTimeImmutable('now'))->modify('+14 days')->format('Y-m-d H:i:s');
+    $planUpdatePro = $adminUserService->updatePlan(
+        $referredId,
+        'PRO',
+        $futureExpiry,
+        'admin-test@example.local'
+    );
+    assertTrue($planUpdatePro['ok'] === true, 'Upgrade PRO admin gagal: ' . $planUpdatePro['message'], $failures);
+
+    $managedAfterPro = $users->findWithPlanById($referredId);
+    assertTrue(
+        is_array($managedAfterPro) && strtoupper((string) ($managedAfterPro['plan_code'] ?? '')) === 'PRO',
+        'Plan user tidak berubah ke PRO lewat admin user management.',
+        $failures
+    );
+    assertTrue(
+        is_array($managedAfterPro) && (string) ($managedAfterPro['plan_expired_at'] ?? '') === $futureExpiry,
+        'Expiry PRO admin user management tidak sesuai.',
+        $failures
+    );
+
+    $adminActionsStmt = $db->prepare(
+        "SELECT COUNT(*)
+         FROM admin_subscription_actions
+         WHERE user_id = :uid
+           AND action_type IN ('MANAGE_USER_PROFILE', 'MANAGE_USER_PASSWORD', 'MANAGE_USER_PLAN')"
+    );
+    $adminActionsStmt->execute(['uid' => $referredId]);
+    $managedActionCount = (int) $adminActionsStmt->fetchColumn();
+    assertTrue($managedActionCount >= 3, 'Audit admin user management tidak tercatat lengkap.', $failures);
 
     // Cleanup test data
     if ($createdUserIds !== []) {

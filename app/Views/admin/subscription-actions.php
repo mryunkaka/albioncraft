@@ -6,19 +6,10 @@
   <title>Admin Subscription Actions</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft Admin</div>
-        <div class="header-actions">
-          <a class="button button-ghost" href="/dashboard">Dashboard</a>
-          <a class="button button-ghost" href="/admin/subscription-requests">Pending Requests</a>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$header_title = 'AlbionCraft Admin';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Admin Action History</h1>
         <p class="page-subtitle">Audit trail untuk aksi subscription manual admin.</p>
@@ -53,6 +44,9 @@
                 <option value="REQUEST_EXTEND" <?= $actionType === 'REQUEST_EXTEND' ? 'selected' : '' ?>>REQUEST_EXTEND</option>
                 <option value="APPROVE_EXTEND" <?= $actionType === 'APPROVE_EXTEND' ? 'selected' : '' ?>>APPROVE_EXTEND</option>
                 <option value="REJECT_EXTEND" <?= $actionType === 'REJECT_EXTEND' ? 'selected' : '' ?>>REJECT_EXTEND</option>
+                <option value="MANAGE_USER_PROFILE" <?= $actionType === 'MANAGE_USER_PROFILE' ? 'selected' : '' ?>>MANAGE_USER_PROFILE</option>
+                <option value="MANAGE_USER_PASSWORD" <?= $actionType === 'MANAGE_USER_PASSWORD' ? 'selected' : '' ?>>MANAGE_USER_PASSWORD</option>
+                <option value="MANAGE_USER_PLAN" <?= $actionType === 'MANAGE_USER_PLAN' ? 'selected' : '' ?>>MANAGE_USER_PLAN</option>
               </select>
             </label>
             <label class="field">
@@ -127,8 +121,4 @@
           <a class="button button-ghost <?= $page >= $lastPage ? 'pointer-events-none opacity-50' : '' ?>" href="<?= $page >= $lastPage ? '#' : ($base . '&page=' . ($page + 1)) ?>">Next</a>
         </div>
       </section>
-    </main>
-  </div>
-</body>
-</html>
-
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

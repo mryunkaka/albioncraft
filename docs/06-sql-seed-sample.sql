@@ -1,8 +1,7 @@
 INSERT INTO plans (code, name, sort_order) VALUES
 ('FREE', 'Free', 1),
-('LITE', 'Lite', 2),
-('MEDIUM', 'Medium', 3),
-('PRO', 'Pro', 4);
+('MEDIUM', 'Medium', 2),
+('PRO', 'Pro', 3);
 
 INSERT INTO plan_features (plan_id, feature_key, is_enabled)
 SELECT id, 'calculator_manual', 1 FROM plans;

@@ -50,9 +50,8 @@ final class PlanRepository
     {
         $sql = "INSERT INTO plans (code, name, sort_order) VALUES
                 ('FREE', 'Free', 1),
-                ('LITE', 'Lite', 2),
-                ('MEDIUM', 'Medium', 3),
-                ('PRO', 'Pro', 4)
+                ('MEDIUM', 'Medium', 2),
+                ('PRO', 'Pro', 3)
                 ON DUPLICATE KEY UPDATE
                   name = VALUES(name),
                   sort_order = VALUES(sort_order)";
@@ -89,7 +88,7 @@ final class PlanRepository
      */
     public function listAll(): array
     {
-        $stmt = $this->db->query('SELECT * FROM plans ORDER BY sort_order ASC, id ASC');
+        $stmt = $this->db->query("SELECT * FROM plans WHERE TRIM(UPPER(code)) <> 'LITE' ORDER BY sort_order ASC, id ASC");
         $rows = $stmt->fetchAll();
         return is_array($rows) ? $rows : [];
     }

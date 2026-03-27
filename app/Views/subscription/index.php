@@ -6,24 +6,10 @@
   <title>Subscription - Albion Crafting Profit Calculator</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft</div>
-        <div class="header-actions">
-          <a class="button button-ghost" href="/dashboard">Dashboard</a>
-          <a class="button button-ghost" href="/referral">Referral</a>
-          <a class="button button-secondary" href="/calculator">Calculator</a>
-          <form action="/logout" method="post">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
-            <button class="button button-ghost" type="submit">Logout</button>
-          </form>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$header_title = 'Albion Crafting Profit Calculator';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Subscription</h1>
         <p class="page-subtitle">Mode v1: aktivasi berbayar tetap manual admin.</p>
@@ -69,7 +55,7 @@
           <div class="grid">
             <label class="field">
               <span class="field-label">Plan</span>
-              <select class="select" name="plan_code" required>
+              <select class="select" name="plan_code" id="plan-code-select" required>
                 <?php foreach ($plans as $plan): ?>
                   <option value="<?= htmlspecialchars((string) ($plan['code'] ?? 'FREE')) ?>">
                     <?= htmlspecialchars((string) ($plan['name'] ?? '-')) ?>
@@ -78,9 +64,9 @@
               </select>
             </label>
 
-            <label class="field">
+            <label class="field" id="duration-field">
               <span class="field-label">Durasi</span>
-              <select class="select" name="duration_type" required>
+              <select class="select" name="duration_type" id="duration-type-select" required>
                 <?php foreach ($durations as $duration): ?>
                   <option value="<?= htmlspecialchars((string) ($duration['code'] ?? 'MONTHLY')) ?>">
                     <?= htmlspecialchars((string) ($duration['code'] ?? '-')) ?> (<?= htmlspecialchars((string) ($duration['days'] ?? 0)) ?> hari)
@@ -132,6 +118,24 @@
       </section>
     </main>
   </div>
-</body>
-</html>
 
+  <script>
+    (function () {
+      const planSelect = document.getElementById('plan-code-select');
+      const durationField = document.getElementById('duration-field');
+      const durationSelect = document.getElementById('duration-type-select');
+      if (!planSelect || !durationField || !durationSelect) return;
+
+      function syncDurationVisibility() {
+        const planCode = String(planSelect.value || '').toUpperCase();
+        const needsDuration = planCode === 'MEDIUM' || planCode === 'PRO';
+        durationField.hidden = !needsDuration;
+        durationSelect.disabled = !needsDuration;
+        durationSelect.required = needsDuration;
+      }
+
+      planSelect.addEventListener('change', syncDurationVisibility);
+      syncDurationVisibility();
+    })();
+  </script>
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

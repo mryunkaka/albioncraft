@@ -18,6 +18,29 @@
   const recipeItemSelect = document.getElementById("recipe-item-select");
   const recipeCitySelect = document.getElementById("recipe-city-select");
   const recipeAutoFillBtn = document.getElementById("recipe-autofill-btn");
+  const bonusLocalCitySelect = document.getElementById("bonus-local-city-select");
+  const craftFeeCitySelect = document.getElementById("craft-fee-city-select");
+  const saveCraftFeeBtn = document.getElementById("save-craft-fee-btn");
+  const sellPriceCitySelect = document.getElementById("sell-price-city-select");
+  const saveSellPriceBtn = document.getElementById("save-sell-price-btn");
+  const saveMaterialPricesBtn = document.getElementById("save-material-prices-btn");
+  const recipeRecommendations = document.getElementById("recipe-recommendations");
+  const calculatorCitiesData = document.getElementById("calculator-cities-data");
+  const cityOptions = parseCityOptions();
+
+  function upper(v) {
+    return String(v || "").toUpperCase();
+  }
+
+  function parseCityOptions() {
+    if (!calculatorCitiesData) return [];
+    try {
+      const parsed = JSON.parse(calculatorCitiesData.textContent || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
 
   function el(tag, className, attrs) {
     const node = document.createElement(tag);
@@ -31,8 +54,14 @@
   function addMaterialRow(initial) {
     const row = el("div", "calc-material-row");
 
+    const itemId = el("input", "material-item-id", { type: "hidden" });
+    itemId.value = (initial && initial.item_id != null) ? String(initial.item_id) : "";
+
     const name = el("input", "input material-name", { type: "text", placeholder: "Nama material", autocomplete: "off" });
-    name.value = (initial && initial.name) || "";
+    name.value = upper((initial && initial.name) || "");
+    name.addEventListener("input", () => {
+      name.value = upper(name.value);
+    });
 
     const qty = el("input", "input material-qty", { type: "number", step: "0.0001", placeholder: "Qty/recipe", min: "0" });
     qty.value = (initial && initial.qty_per_recipe != null) ? String(initial.qty_per_recipe) : "0";
@@ -45,6 +74,14 @@
     rt.appendChild(new Option("NON_RETURN", "NON_RETURN"));
     rt.value = (initial && initial.return_type) || "RETURN";
 
+    const city = el("select", "select material-city");
+    city.appendChild(new Option("Kota beli material", ""));
+    for (const option of cityOptions) {
+      city.appendChild(new Option(String(option.name || ""), String(option.id || "")));
+    }
+    city.value = (initial && initial.city_id != null) ? String(initial.city_id) : "";
+
+    const action = el("div", "material-action");
     const remove = el("button", "button button-ghost material-remove", { type: "button" });
     remove.textContent = "Hapus";
     remove.addEventListener("click", () => {
@@ -53,11 +90,14 @@
       reindexMaterialNames();
     });
 
+    row.appendChild(itemId);
     row.appendChild(name);
     row.appendChild(qty);
     row.appendChild(price);
     row.appendChild(rt);
-    row.appendChild(remove);
+    row.appendChild(city);
+    action.appendChild(remove);
+    row.appendChild(action);
 
     materialsRoot.appendChild(row);
     reindexMaterialNames();
@@ -68,20 +108,25 @@
     let i = 0;
     for (const row of rows) {
       const inputs = row.querySelectorAll("input, select");
-      const name = inputs[0];
-      const qty = inputs[1];
-      const price = inputs[2];
-      const rt = inputs[3];
+      const itemId = inputs[0];
+      const name = inputs[1];
+      const qty = inputs[2];
+      const price = inputs[3];
+      const rt = inputs[4];
+      const city = inputs[5];
 
+      itemId.name = `materials[${i}][item_id]`;
       name.name = `materials[${i}][name]`;
       qty.name = `materials[${i}][qty_per_recipe]`;
       price.name = `materials[${i}][buy_price]`;
       rt.name = `materials[${i}][return_type]`;
+      city.name = `materials[${i}][city_id]`;
 
       name.id = `mat-${i}-name`;
       qty.id = `mat-${i}-qty`;
       price.id = `mat-${i}-price`;
       rt.id = `mat-${i}-type`;
+      city.id = `mat-${i}-city`;
       i++;
     }
   }
@@ -132,13 +177,35 @@
     const item = data.item || {};
     const cityBonus = data.city_bonus || {};
     const materials = Array.isArray(data.materials) ? data.materials : [];
+    const recommendations = data.recommendations || {};
+    const cheapestMaterialMap = new Map();
+    const cheapestMaterials = Array.isArray(recommendations.cheapest_material_cities) ? recommendations.cheapest_material_cities : [];
+
+    for (const row of cheapestMaterials) {
+      cheapestMaterialMap.set(Number(row.item_id || 0), Number(row.city_id || 0));
+    }
 
     setFieldValue("item_id", item.id || "");
-    setFieldValue("item_name", item.name || "");
+    setFieldValue("item_name", upper(item.name || ""));
     setFieldValue("item_value", item.item_value != null ? item.item_value : 0);
     setFieldValue("output_qty", item.output_qty != null ? item.output_qty : 1);
     setFieldValue("sell_price", item.sell_price != null ? item.sell_price : "");
+    if (sellPriceCitySelect) {
+      const bestSellCityId = Number((((recommendations.best_sell_city || {}).city_id) || 0));
+      sellPriceCitySelect.value = bestSellCityId > 0 ? String(bestSellCityId) : "";
+    }
+    if (item.craft_fee != null) {
+      setFieldValue("usage_fee", item.craft_fee);
+    }
+    if (craftFeeCitySelect) {
+      const bestCraftCityId = Number((((recommendations.best_craft_fee_city || {}).city_id) || 0));
+      craftFeeCitySelect.value = bestCraftCityId > 0 ? String(bestCraftCityId) : "";
+    }
     setFieldValue("bonus_local", cityBonus.bonus_percent != null ? cityBonus.bonus_percent : 0);
+    if (bonusLocalCitySelect) {
+      const bonusCityId = Number(cityBonus.city_id || 0);
+      bonusLocalCitySelect.value = bonusCityId > 0 ? String(bonusCityId) : "";
+    }
 
     clearMaterials();
     if (materials.length === 0) {
@@ -146,15 +213,63 @@
     } else {
       for (const material of materials) {
         addMaterialRow({
+          item_id: material.item_id != null ? material.item_id : "",
           name: material.name || "",
           qty_per_recipe: material.qty_per_recipe != null ? material.qty_per_recipe : 0,
           buy_price: material.buy_price != null ? material.buy_price : 0,
           return_type: material.return_type || "RETURN",
+          city_id: cheapestMaterialMap.get(Number(material.item_id || 0)) || "",
         });
       }
     }
     reindexMaterialNames();
+    renderRecommendations(recommendations);
     scheduleSave();
+  }
+
+  function renderRecommendations(data) {
+    if (!recipeRecommendations) return;
+    if (!data || typeof data !== "object") {
+      recipeRecommendations.hidden = true;
+      recipeRecommendations.innerHTML = "";
+      return;
+    }
+
+    const lines = [];
+
+    const craft = data.best_craft_fee_city || null;
+    if (craft && craft.price_value != null) {
+      lines.push(`Craft paling murah: ${craft.city_name || "-"} @ ${fmtMoney(Number(craft.price_value))}`);
+    }
+
+    const recommendedCraft = data.recommended_craft_city || null;
+    if (recommendedCraft && recommendedCraft.estimated_cost_per_item != null) {
+      lines.push(`Rekomendasi kota craft: ${recommendedCraft.city_name || "-"} | estimasi cost/item ${fmtMoney(Number(recommendedCraft.estimated_cost_per_item))} | bonus ${Number(recommendedCraft.bonus_percent || 0).toFixed(0)}%`);
+    }
+
+    const sell = data.best_sell_city || null;
+    if (sell && sell.price_value != null) {
+      lines.push(`Jual paling tinggi: ${sell.city_name || "-"} @ ${fmtMoney(Number(sell.price_value))}`);
+    }
+
+    const localBonuses = Array.isArray(data.local_bonus_cities) ? data.local_bonus_cities : [];
+    if (localBonuses.length > 0) {
+      lines.push(`Bonus local tersedia: ${localBonuses.map((row) => `${row.city_name} (${Number(row.bonus_percent || 0).toFixed(0)}%)`).join(", ")}`);
+    }
+
+    const cheapestMaterials = Array.isArray(data.cheapest_material_cities) ? data.cheapest_material_cities : [];
+    for (const row of cheapestMaterials) {
+      lines.push(`Beli murah ${row.name || "-"}: ${(row.city_name || "Global")} @ ${fmtMoney(Number(row.price_value || 0))}`);
+    }
+
+    if (lines.length === 0) {
+      recipeRecommendations.hidden = true;
+      recipeRecommendations.innerHTML = "";
+      return;
+    }
+
+    recipeRecommendations.hidden = false;
+    recipeRecommendations.innerHTML = lines.map((line) => `<div>${line}</div>`).join("");
   }
 
   async function loadRecipeItems(keyword) {
@@ -168,7 +283,10 @@
 
     const rows = Array.isArray(json.data) ? json.data : [];
     for (const row of rows) {
-      const label = `${row.name} (${row.item_code})`;
+      const fallbackLabel = row.item_code
+        ? `${row.name} (${row.item_code})`
+        : String(row.name || "Untitled Recipe");
+      const label = String(row.label || fallbackLabel);
       recipeItemSelect.appendChild(new Option(label, String(row.id)));
     }
 
@@ -177,14 +295,23 @@
     }
   }
 
-  function setError(msg) {
+  function setFeedback(msg, type) {
     if (!msg) {
       errorBox.hidden = true;
       errorBox.textContent = "";
+      errorBox.classList.add("alert-error");
       return;
     }
     errorBox.hidden = false;
+    errorBox.classList.toggle("alert-error", type !== "success");
     errorBox.textContent = msg;
+  }
+
+  const itemNameInput = form.querySelector('[name="item_name"]');
+  if (itemNameInput) {
+    itemNameInput.addEventListener("input", () => {
+      itemNameInput.value = upper(itemNameInput.value);
+    });
   }
 
   function renderMaterialSummary(materials) {
@@ -397,10 +524,12 @@
     for (const row of materialsRoot.querySelectorAll(".calc-material-row")) {
       const inputs = row.querySelectorAll("input, select");
       materials.push({
-        name: inputs[0].value,
-        qty_per_recipe: inputs[1].value,
-        buy_price: inputs[2].value,
-        return_type: inputs[3].value,
+        item_id: inputs[0].value,
+        name: inputs[1].value,
+        qty_per_recipe: inputs[2].value,
+        buy_price: inputs[3].value,
+        return_type: inputs[4].value,
+        city_id: inputs[5].value,
       });
     }
 
@@ -422,10 +551,12 @@
       clearMaterials();
       for (const m of state.materials) {
         addMaterialRow({
+          item_id: m && m.item_id != null ? Number(m.item_id) : 0,
           name: (m && m.name) || "",
           qty_per_recipe: m && m.qty_per_recipe != null ? Number(m.qty_per_recipe) : 0,
           buy_price: m && m.buy_price != null ? Number(m.buy_price) : 0,
           return_type: (m && m.return_type) || "RETURN",
+          city_id: m && m.city_id != null ? Number(m.city_id) : 0,
         });
       }
       reindexMaterialNames();
@@ -471,7 +602,7 @@
       form.reset();
       setFieldValue("item_id", "");
       defaultMaterials();
-      setError("");
+      setFeedback("");
       // Ensure required numeric field stays at HTML default after reset.
       const t = form.querySelector('[name="target_output_qty"]');
       if (t && (!t.value || String(t.value).trim() === "")) t.value = "100";
@@ -485,47 +616,183 @@
 
   if (recipeAutoFillBtn) {
     recipeAutoFillBtn.addEventListener("click", async () => {
-      setError("");
+      setFeedback("");
 
-      const itemId = recipeItemSelect ? Number(recipeItemSelect.value || "0") : 0;
+      const entryId = recipeItemSelect ? String(recipeItemSelect.value || "") : "";
       const cityId = recipeCitySelect ? Number(recipeCitySelect.value || "0") : 0;
-      if (!itemId) {
-        setError("Pilih item recipe database terlebih dahulu.");
+      if (!entryId) {
+        setFeedback("Pilih item recipe database terlebih dahulu.");
         return;
       }
 
       recipeAutoFillBtn.disabled = true;
       try {
-        const qs = new URLSearchParams({ item_id: String(itemId) });
+        const qs = new URLSearchParams({ entry_id: entryId });
         if (cityId > 0) qs.set("city_id", String(cityId));
         const json = await fetchJson(`/api/calculator/recipes/detail?${qs.toString()}`);
         populateRecipeDetail(json.data || null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal load recipe.");
+        setFeedback(err instanceof Error ? err.message : "Gagal load recipe.");
       } finally {
         recipeAutoFillBtn.disabled = false;
       }
     });
   }
 
+  if (saveCraftFeeBtn) {
+    saveCraftFeeBtn.addEventListener("click", async () => {
+      setFeedback("");
+      const itemId = Number((form.querySelector('[name="item_id"]') || {}).value || "0");
+      const cityId = craftFeeCitySelect ? Number(craftFeeCitySelect.value || "0") : 0;
+      const usageFee = Number((form.querySelector('[name="usage_fee"]') || {}).value || "0");
+      const csrfToken = String((form.querySelector('[name="_token"]') || {}).value || "");
+
+      if (!itemId) {
+        setFeedback("Pilih item recipe database terlebih dahulu agar craft price bisa disimpan.");
+        return;
+      }
+      if (!cityId) {
+        setFeedback("Pilih kota craft price terlebih dahulu.");
+        return;
+      }
+
+      saveCraftFeeBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append("_token", csrfToken);
+        fd.append("item_id", String(itemId));
+        fd.append("city_id", String(cityId));
+        fd.append("usage_fee", String(usageFee));
+        const res = await fetch("/api/calculator/craft-fee/save", {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body: fd,
+        });
+        const json = await res.json().catch(() => null);
+        if (!json || json.success !== true) {
+          throw new Error((json && json.message) || "Gagal simpan craft price.");
+        }
+        setFeedback("Craft price berhasil disimpan.", "success");
+      } catch (err) {
+        setFeedback(err instanceof Error ? err.message : "Gagal simpan craft price.");
+      } finally {
+        saveCraftFeeBtn.disabled = false;
+      }
+    });
+  }
+
+  if (saveSellPriceBtn) {
+    saveSellPriceBtn.addEventListener("click", async () => {
+      setFeedback("");
+      const itemId = Number((form.querySelector('[name="item_id"]') || {}).value || "0");
+      const cityId = sellPriceCitySelect ? Number(sellPriceCitySelect.value || "0") : 0;
+      const sellPrice = Number((form.querySelector('[name="sell_price"]') || {}).value || "0");
+      const csrfToken = String((form.querySelector('[name="_token"]') || {}).value || "");
+
+      if (!itemId) {
+        setFeedback("Pilih item recipe database terlebih dahulu agar harga jual bisa disimpan.");
+        return;
+      }
+      if (!cityId) {
+        setFeedback("Pilih kota jual terlebih dahulu.");
+        return;
+      }
+
+      saveSellPriceBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append("_token", csrfToken);
+        fd.append("item_id", String(itemId));
+        fd.append("city_id", String(cityId));
+        fd.append("sell_price", String(sellPrice));
+        const res = await fetch("/api/calculator/sell-price/save", {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body: fd,
+        });
+        const json = await res.json().catch(() => null);
+        if (!json || json.success !== true) {
+          throw new Error((json && json.message) || "Gagal simpan harga jual.");
+        }
+        setFeedback("Harga jual berhasil disimpan.", "success");
+      } catch (err) {
+        setFeedback(err instanceof Error ? err.message : "Gagal simpan harga jual.");
+      } finally {
+        saveSellPriceBtn.disabled = false;
+      }
+    });
+  }
+
+  if (saveMaterialPricesBtn) {
+    saveMaterialPricesBtn.addEventListener("click", async () => {
+      setFeedback("");
+      const csrfToken = String((form.querySelector('[name="_token"]') || {}).value || "");
+      const materials = [];
+
+      for (const row of materialsRoot.querySelectorAll(".calc-material-row")) {
+        const itemIdField = row.querySelector(".material-item-id");
+        const cityField = row.querySelector(".material-city");
+        const priceField = row.querySelector(".material-price");
+        const itemId = Number((itemIdField || {}).value || "0");
+        const cityId = Number((cityField || {}).value || "0");
+        const buyPrice = Number((priceField || {}).value || "0");
+
+        if (!itemId || !cityId) continue;
+        materials.push({ item_id: itemId, city_id: cityId, buy_price: buyPrice });
+      }
+
+      if (materials.length === 0) {
+        setFeedback("Pilih minimal satu kota beli material dari item recipe database.");
+        return;
+      }
+
+      saveMaterialPricesBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append("_token", csrfToken);
+        for (let i = 0; i < materials.length; i++) {
+          fd.append(`materials[${i}][item_id]`, String(materials[i].item_id));
+          fd.append(`materials[${i}][city_id]`, String(materials[i].city_id));
+          fd.append(`materials[${i}][buy_price]`, String(materials[i].buy_price));
+        }
+        const res = await fetch("/api/calculator/material-prices/save", {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          body: fd,
+        });
+        const json = await res.json().catch(() => null);
+        if (!json || json.success !== true) {
+          throw new Error((json && json.message) || "Gagal simpan harga material.");
+        }
+        setFeedback(json.message || "Harga material berhasil disimpan.", "success");
+      } catch (err) {
+        setFeedback(err instanceof Error ? err.message : "Gagal simpan harga material.");
+      } finally {
+        saveMaterialPricesBtn.disabled = false;
+      }
+    });
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    setError("");
+    setFeedback("");
 
     const fd = new FormData(form);
 
     const materials = [];
     for (const row of materialsRoot.querySelectorAll(".calc-material-row")) {
       const inputs = row.querySelectorAll("input, select");
-      const name = inputs[0].value.trim();
-      const qty = Number(inputs[1].value || "0");
-      const price = Number(inputs[2].value || "0");
-      const rt = String(inputs[3].value || "RETURN");
-      materials.push({ name, qty_per_recipe: qty, buy_price: price, return_type: rt });
+      const name = inputs[1].value.trim();
+      const normalizedName = upper(name);
+      inputs[1].value = normalizedName;
+      const qty = Number(inputs[2].value || "0");
+      const price = Number(inputs[3].value || "0");
+      const rt = String(inputs[4].value || "RETURN");
+      materials.push({ name: normalizedName, qty_per_recipe: qty, buy_price: price, return_type: rt });
     }
 
     const payload = {
-      item_name: String(fd.get("item_name") || ""),
+      item_name: upper(String(fd.get("item_name") || "")),
       bonus_basic: readNumber(fd, "bonus_basic"),
       bonus_local: readNumber(fd, "bonus_local"),
       bonus_daily: readNumber(fd, "bonus_daily"),
@@ -546,22 +813,45 @@
       payload.sell_price = Number(rawSell);
     }
 
+    if (!payload.item_name || payload.item_name.trim() === "") {
+      setFeedback("Nama Item wajib diisi.");
+      return;
+    }
+
+    if (!payload.output_qty || payload.output_qty < 1) {
+      setFeedback("Output Quantity / Recipe wajib diisi minimal 1.");
+      return;
+    }
+
     if (!payload.target_output_qty || payload.target_output_qty < 1) {
-      setError("Target Output (Item) wajib diisi minimal 1.");
+      setFeedback("Target Output (Item) wajib diisi minimal 1.");
+      return;
+    }
+
+    if (payload.bonus_local > 0) {
+      const bonusLocalCityId = String(fd.get("bonus_local_city_id") || "").trim();
+      if (bonusLocalCityId === "") {
+        setFeedback("Kota Bonus Local wajib dipilih jika Bonus Local lebih dari 0.");
+        return;
+      }
+    }
+
+    if (rawSell == null || String(rawSell).trim() === "") {
+      setFeedback("Market Price wajib diisi.");
       return;
     }
 
     if (payload.craft_with_focus) {
       if (!payload.focus_points || payload.focus_points <= 0) {
-        setError("Focus Points wajib diisi jika Craft With Focus = Yes.");
+        setFeedback("Focus Points wajib diisi jika Craft With Focus = Yes.");
         return;
       }
       if (!payload.focus_per_craft || payload.focus_per_craft <= 0) {
-        setError("Focus per Craft wajib diisi jika Craft With Focus = Yes.");
+        setFeedback("Focus per Craft wajib diisi jika Craft With Focus = Yes.");
         return;
       }
       if (payload.focus_points < payload.focus_per_craft) {
-        setError("Focus Points harus lebih besar atau sama dengan Focus per Craft. Cek apakah nilai tertukar (contoh: points 30000, per craft 6602).");
+        setFeedback("Focus Points harus lebih besar atau sama dengan Focus per Craft. Cek apakah nilai tertukar (contoh: points 30000, per craft 6602).");
         return;
       }
     }
@@ -574,7 +864,7 @@
         body: JSON.stringify(payload),
       });
     } catch (err) {
-      setError("Gagal request ke server.");
+      setFeedback("Gagal request ke server.");
       return;
     }
 
@@ -582,7 +872,7 @@
     if (!json || json.success !== true) {
       const msg = (json && json.message) ? json.message : "Kalkulasi gagal.";
       const errors = (json && json.errors) ? JSON.stringify(json.errors) : "";
-      setError(errors ? (msg + " " + errors) : msg);
+      setFeedback(errors ? (msg + " " + errors) : msg);
       return;
     }
 

@@ -275,6 +275,17 @@ try {
         expectTrue((float) $bulkRow['price_value'] === 1400.0, 'bulk update global BUY gagal mengubah price_value.', $failures);
     }
 
+    // Case 10: craft fee type allowed
+    $craftFeeInsert = $service->upsertPrice($userAId, [
+        'item_id' => $item2Id,
+        'city_id' => (string) $cityId,
+        'price_type' => 'CRAFT_FEE',
+        'price_value' => 275,
+        'observed_at' => '2026-03-27T14:00',
+        'notes' => 'craft fee city',
+    ]);
+    expectTrue($craftFeeInsert['ok'] === true, 'insert CRAFT_FEE harus sukses.', $failures);
+
     $bulkInvalid = $service->bulkUpsertPrices($userAId, [
         'bulk_rows' => "item_code,city_code,price_type,price_value\nUNKNOWN_ITEM,,BUY,10",
     ]);

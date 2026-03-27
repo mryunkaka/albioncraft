@@ -6,28 +6,11 @@
   <title>Dashboard - Albion Crafting Profit Calculator</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft</div>
-        <div class="header-actions">
-          <?php if (!empty($is_admin)): ?>
-            <a class="button button-danger" href="/admin/subscription-requests">Admin Requests</a>
-          <?php endif; ?>
-          <a class="button button-ghost" href="/subscription">Subscription</a>
-          <a class="button button-ghost" href="/referral">Referral</a>
-          <a class="button button-ghost" href="/price-data">Data Harga</a>
-          <a class="button button-secondary" href="/calculator">Calculator</a>
-          <form action="/logout" method="post">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
-            <button class="button button-ghost" type="submit">Logout</button>
-          </form>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$auth = is_array($user ?? null) ? $user : null;
+$header_title = 'Albion Crafting Profit Calculator';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Dashboard</h1>
         <p class="page-subtitle">
@@ -178,9 +161,4 @@
           </table>
         </div>
       </section>
-    </main>
-
-    <footer class="app-footer">Albion Crafting Profit Calculator | Tailwind local build | No CDN</footer>
-  </div>
-</body>
-</html>
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

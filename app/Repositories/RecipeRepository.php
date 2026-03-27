@@ -129,4 +129,26 @@ final class RecipeRepository
         $row = $stmt->fetch();
         return is_array($row) ? $row : null;
     }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function listCityBonusesByCategoryId(int $categoryId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT
+                cb.id,
+                cb.bonus_percent,
+                c.id AS city_id,
+                c.code AS city_code,
+                c.name AS city_name
+             FROM city_bonuses cb
+             INNER JOIN cities c ON c.id = cb.city_id
+             WHERE cb.category_id = :category_id
+             ORDER BY cb.bonus_percent DESC, c.name ASC'
+        );
+        $stmt->execute(['category_id' => $categoryId]);
+        $rows = $stmt->fetchAll();
+        return is_array($rows) ? $rows : [];
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\SubscriptionService;
+use App\Support\AdminAccess;
 use App\Support\Csrf;
 use App\Support\Request;
 use App\Support\Response;
@@ -15,11 +16,14 @@ final class AdminSubscriptionController
 {
     public function index(Request $request): void
     {
+        $auth = Session::get('auth');
         $service = new SubscriptionService();
         $rows = $service->pendingRequests(200);
 
         Response::html(View::render('admin/subscription-requests', [
+            'auth' => $auth,
             'rows' => $rows,
+            'is_admin' => AdminAccess::isAdminEmail(is_array($auth) ? (string) ($auth['email'] ?? '') : ''),
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),
@@ -28,11 +32,15 @@ final class AdminSubscriptionController
 
     public function actions(Request $request): void
     {
+        $auth = Session::get('auth');
         $service = new SubscriptionService();
         $history = $service->adminActionHistory($request->query());
 
         Response::html(View::render('admin/subscription-actions', [
+            'auth' => $auth,
             'history' => $history,
+            'is_admin' => AdminAccess::isAdminEmail(is_array($auth) ? (string) ($auth['email'] ?? '') : ''),
+            'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),
         ]));

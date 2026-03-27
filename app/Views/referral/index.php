@@ -6,24 +6,10 @@
   <title>Referral - Albion Crafting Profit Calculator</title>
   <link rel="stylesheet" href="/assets/app.css?v=20260326-10">
 </head>
-<body>
-  <div class="app-main">
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="mobile-brand">AlbionCraft</div>
-        <div class="header-actions">
-          <a class="button button-ghost" href="/dashboard">Dashboard</a>
-          <a class="button button-ghost" href="/subscription">Subscription</a>
-          <a class="button button-secondary" href="/calculator">Calculator</a>
-          <form action="/logout" method="post">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
-            <button class="button button-ghost" type="submit">Logout</button>
-          </form>
-        </div>
-      </div>
-    </header>
-
-    <main class="app-content stack">
+<?php
+$header_title = 'Albion Crafting Profit Calculator';
+require dirname(__DIR__) . '/partials/auth-shell-start.php';
+?>
       <section class="page-header">
         <h1 class="page-title">Referral</h1>
         <p class="page-subtitle">Bagikan kode referral untuk mendapatkan bonus hari subscription.</p>
@@ -85,8 +71,4 @@
           </table>
         </div>
       </section>
-    </main>
-  </div>
-</body>
-</html>
-
+<?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>
