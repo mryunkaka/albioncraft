@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#f4fbf7"/>
+  <rect x="36" y="36" width="1128" height="648" rx="28" fill="#ffffff" stroke="#cde9d8" stroke-width="4"/>
+  <text x="70" y="95" fill="#14532d" font-size="34" font-family="Arial, sans-serif" font-weight="700">Bonus, Premium, dan Focus</text>
+  <text x="70" y="132" fill="#567368" font-size="20" font-family="Arial, sans-serif">Bagian ini memengaruhi RRR, total output, dan efisiensi craft.</text>
+
+  <rect x="80" y="180" width="320" height="210" rx="22" fill="#eefbf4" stroke="#bce6ca" stroke-width="3"/>
+  <text x="110" y="225" fill="#14532d" font-size="24" font-family="Arial, sans-serif" font-weight="700">Premium & Bonus</text>
+  <text x="110" y="270" fill="#315646" font-size="18" font-family="Arial, sans-serif">Premium: aktif / tidak.</text>
+  <text x="110" y="300" fill="#315646" font-size="18" font-family="Arial, sans-serif">Bonus Basic: bonus dasar station.</text>
+  <text x="110" y="330" fill="#315646" font-size="18" font-family="Arial, sans-serif">Bonus Local: bonus kota tertentu.</text>
+  <text x="110" y="360" fill="#315646" font-size="18" font-family="Arial, sans-serif">Bonus Daily: bonus event harian.</text>
+
+  <rect x="440" y="180" width="320" height="210" rx="22" fill="#edf4ff" stroke="#c2d7ff" stroke-width="3"/>
+  <text x="470" y="225" fill="#173b7a" font-size="24" font-family="Arial, sans-serif" font-weight="700">Craft With Focus</text>
+  <text x="470" y="270" fill="#374b69" font-size="18" font-family="Arial, sans-serif">No: fokus diabaikan.</text>
+  <text x="470" y="300" fill="#374b69" font-size="18" font-family="Arial, sans-serif">Yes: isi Focus Points</text>
+  <text x="470" y="330" fill="#374b69" font-size="18" font-family="Arial, sans-serif">dan Focus per Craft.</text>
+  <text x="470" y="360" fill="#374b69" font-size="18" font-family="Arial, sans-serif">Sistem hitung kapasitas craft fokus.</text>
+
+  <rect x="800" y="180" width="320" height="210" rx="22" fill="#fff8eb" stroke="#ffd6a6" stroke-width="3"/>
+  <text x="830" y="225" fill="#8a4912" font-size="24" font-family="Arial, sans-serif" font-weight="700">Aturan Cepat</text>
+  <text x="830" y="270" fill="#6d4d31" font-size="18" font-family="Arial, sans-serif">1. Bonus Local perlu kota.</text>
+  <text x="830" y="300" fill="#6d4d31" font-size="18" font-family="Arial, sans-serif">2. Focus Points >= Focus/Craft.</text>
+  <text x="830" y="330" fill="#6d4d31" font-size="18" font-family="Arial, sans-serif">3. Nilai bonus isi dalam persen.</text>
+
+  <rect x="180" y="460" width="840" height="120" rx="22" fill="#f8fafc" stroke="#dbe5f2" stroke-width="3"/>
+  <text x="220" y="510" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">Tips</text>
+  <text x="220" y="548" fill="#475569" font-size="18" font-family="Arial, sans-serif">Kalau tidak pakai fokus, biarkan Craft With Focus = No dan nilai focus tetap 0.</text>
+
+  <path d="M400 285h30" stroke="#82b2a0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M760 285h30" stroke="#82b2a0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M430 285l-14 -10v20z" fill="#82b2a0"/>
+  <path d="M790 285l-14 -10v20z" fill="#82b2a0"/>
+</svg>

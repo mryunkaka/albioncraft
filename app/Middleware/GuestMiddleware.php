@@ -7,6 +7,7 @@ namespace App\Middleware;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
+use App\Support\HomePath;
 
 final class GuestMiddleware implements MiddlewareInterface
 {
@@ -16,8 +17,8 @@ final class GuestMiddleware implements MiddlewareInterface
             return true;
         }
 
-        Response::redirect('/dashboard');
+        $auth = Session::get('auth');
+        Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
         return false;
     }
 }
-

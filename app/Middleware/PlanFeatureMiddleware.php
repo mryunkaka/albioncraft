@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Services\SubscriptionService;
+use App\Support\HomePath;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -41,7 +42,7 @@ final class PlanFeatureMiddleware implements MiddlewareInterface
         }
 
         Session::flash('error', 'Fitur ini membutuhkan plan yang lebih tinggi.');
-        Response::redirect('/dashboard');
+        Response::redirect(HomePath::forAuth($auth));
         return false;
     }
 }

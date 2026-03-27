@@ -13,7 +13,6 @@ $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP
 $headerTitle = (string) ($header_title ?? 'Albion Crafting Profit Calculator');
 $showGuideButton = ($show_guide_button ?? false) === true;
 $adminOpen = str_starts_with($requestPath, '/admin/');
-
 $navClass = static function (string $path, bool $exact = true) use ($requestPath): string {
     $active = $exact ? $requestPath === $path : str_starts_with($requestPath, $path);
     return $active ? 'nav-link active' : 'nav-link';
@@ -34,6 +33,10 @@ $navClass = static function (string $path, bool $exact = true) use ($requestPath
     .nav-sublink { display:block; border-radius:.75rem; padding:.45rem .75rem; font-size:.875rem; line-height:1.25rem; font-weight:500; color:#334155; transition:color .2s, background-color .2s, box-shadow .2s; }
     .nav-sublink:hover { background:#edf6ff; color:#1848df; }
     .nav-sublink.active { background:#1f5ff2; color:#fff; box-shadow:0 20px 40px rgba(11,41,86,.1); }
+    .nav-link-stack { display:flex; flex-direction:column; gap:.15rem; }
+    .nav-link-note { font-size:.72rem; line-height:1rem; color:#64748b; }
+    .nav-link.active .nav-link-note,
+    .nav-link:hover .nav-link-note { color:inherit; opacity:.9; }
   </style>
   <div class="app-shell">
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
@@ -49,10 +52,20 @@ $navClass = static function (string $path, bool $exact = true) use ($requestPath
         <div class="sidebar-menu-area">
           <nav class="sidebar-nav">
             <a class="<?= $navClass('/calculator') ?>" href="/calculator">Calculator</a>
-            <a class="<?= $navClass('/dashboard') ?>" href="/dashboard">Dashboard</a>
+            <a class="<?= $navClass('/dashboard') ?>" href="/dashboard">
+              <span class="nav-link-stack">
+                <span>Dashboard</span>
+                <span class="nav-link-note">Khusus Medium &amp; Pro</span>
+              </span>
+            </a>
             <a class="<?= $navClass('/subscription') ?>" href="/subscription">Subscription</a>
             <a class="<?= $navClass('/referral') ?>" href="/referral">Referral</a>
-            <a class="<?= $navClass('/price-data') ?>" href="/price-data">Data Harga</a>
+            <a class="<?= $navClass('/price-data') ?>" href="/price-data">
+              <span class="nav-link-stack">
+                <span>Data Harga</span>
+                <span class="nav-link-note">Khusus Pro</span>
+              </span>
+            </a>
             <?php if (($is_admin ?? false) === true): ?>
               <details class="sidebar-admin-group" <?= $adminOpen ? 'open' : '' ?>>
                 <summary class="nav-link nav-link-admin<?= $adminOpen ? ' active' : '' ?>">Admin</summary>

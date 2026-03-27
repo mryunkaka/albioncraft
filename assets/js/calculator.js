@@ -15,6 +15,40 @@
   const sidebarBackdrop = document.getElementById("sidebar-backdrop");
   const toggleSidebarBtn = document.getElementById("toggle-sidebar");
   const closeSidebarBtn = document.getElementById("close-sidebar");
+  const heroTotalProfit = document.getElementById("calc-hero-total-profit");
+  const heroTotalProfitNote = document.getElementById("calc-hero-total-profit-note");
+  const heroProfitItem = document.getElementById("calc-hero-profit-item");
+  const heroProfitItemNote = document.getElementById("calc-hero-profit-item-note");
+  const heroMargin = document.getElementById("calc-hero-margin");
+  const heroMarginNote = document.getElementById("calc-hero-margin-note");
+  const tooltipButtons = document.querySelectorAll(".field-help-trigger");
+  const tooltipPopover = document.getElementById("calc-tooltip-popover");
+  const tooltipTitle = document.getElementById("calc-tooltip-title");
+  const tooltipBody = document.getElementById("calc-tooltip-body");
+  const tooltipPreviewBtn = document.getElementById("calc-tooltip-preview");
+  const tooltipImageModal = document.getElementById("tooltip-image-modal");
+  const tooltipImageBackdrop = document.getElementById("tooltip-image-backdrop");
+  const tooltipImageClose = document.getElementById("tooltip-image-close");
+  const tooltipImageTitle = document.getElementById("tooltip-image-title");
+  const tooltipImageStage = document.getElementById("tooltip-image-stage");
+  const tooltipImageFigure = document.getElementById("tooltip-image-figure");
+  const tooltipImagePreview = document.getElementById("tooltip-image-preview");
+  const tooltipZoomInBtn = document.getElementById("tooltip-image-zoom-in");
+  const tooltipZoomOutBtn = document.getElementById("tooltip-image-zoom-out");
+  const tooltipResetBtn = document.getElementById("tooltip-image-reset");
+  let activeTooltipButton = null;
+  let activeTooltipImage = "";
+  const imageState = {
+    scale: 1,
+    x: 0,
+    y: 0,
+    minScale: 1,
+    maxScale: 5,
+    dragging: false,
+    pointerIds: new Map(),
+    pinchStartDistance: 0,
+    pinchStartScale: 1,
+  };
 
   function el(tag, className, attrs) {
     const node = document.createElement(tag);
@@ -273,6 +307,252 @@
     return n.toFixed(2) + "%";
   }
 
+  function renderHeroSummary(d) {
+    const sc = d && d.scenario ? d.scenario : null;
+    const modeLabel = sc && sc.mode === "MARKET" ? "Market price" : "SRP 10 default";
+
+    if (heroTotalProfit) {
+      heroTotalProfit.textContent = sc && sc.total_profit != null ? fmtMoney(Number(sc.total_profit)) : "-";
+    }
+    if (heroTotalProfitNote) {
+      heroTotalProfitNote.textContent = `Skenario: ${modeLabel}`;
+    }
+
+    if (heroProfitItem) {
+      heroProfitItem.textContent = sc && sc.profit_per_item != null ? fmtMoney(Number(sc.profit_per_item)) : "-";
+    }
+    if (heroProfitItemNote) {
+      heroProfitItemNote.textContent = "Net per item setelah tax + setup fee";
+    }
+
+    if (heroMargin) {
+      heroMargin.textContent = sc && sc.margin_percent != null ? fmtPercent(Number(sc.margin_percent)) : "-";
+    }
+    if (heroMarginNote) {
+      const status = d && d.status ? String(d.status) : "-";
+      const level = d && d.status_level ? String(d.status_level) : "-";
+      heroMarginNote.textContent = `Status: ${status} | Level: ${level}`;
+    }
+  }
+
+  function resetHeroSummary() {
+    if (heroTotalProfit) heroTotalProfit.textContent = "-";
+    if (heroTotalProfitNote) heroTotalProfitNote.textContent = "Belum ada hasil kalkulasi";
+    if (heroProfitItem) heroProfitItem.textContent = "-";
+    if (heroProfitItemNote) heroProfitItemNote.textContent = "Net per item setelah tax + setup fee";
+    if (heroMargin) heroMargin.textContent = "-";
+    if (heroMarginNote) heroMarginNote.textContent = "Status profit akan tampil setelah hitung";
+  }
+
+  function closeTooltipPopover() {
+    if (!tooltipPopover) return;
+    tooltipPopover.classList.remove("is-open");
+    tooltipPopover.setAttribute("aria-hidden", "true");
+    activeTooltipButton = null;
+    activeTooltipImage = "";
+  }
+
+  function positionTooltipPopover(trigger) {
+    if (!tooltipPopover || !trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const popRect = tooltipPopover.getBoundingClientRect();
+    let left = rect.left + (rect.width / 2) - (popRect.width / 2);
+    let top = rect.bottom + 12;
+
+    const maxLeft = window.innerWidth - popRect.width - 12;
+    left = Math.max(12, Math.min(left, maxLeft));
+
+    if (top + popRect.height > window.innerHeight - 12) {
+      top = rect.top - popRect.height - 12;
+    }
+    top = Math.max(12, top);
+
+    tooltipPopover.style.left = `${left}px`;
+    tooltipPopover.style.top = `${top}px`;
+  }
+
+  function openTooltipPopover(trigger) {
+    if (!tooltipPopover || !tooltipTitle || !tooltipBody || !trigger) return;
+
+    const title = trigger.dataset.tooltipTitle || "Info";
+    const body = trigger.dataset.tooltipBody || "";
+    activeTooltipImage = trigger.dataset.tooltipImage || "";
+    tooltipTitle.textContent = title;
+    tooltipBody.textContent = body;
+    if (tooltipPreviewBtn) {
+      tooltipPreviewBtn.hidden = !activeTooltipImage;
+    }
+
+    tooltipPopover.classList.add("is-open");
+    tooltipPopover.setAttribute("aria-hidden", "false");
+    activeTooltipButton = trigger;
+    positionTooltipPopover(trigger);
+  }
+
+  function applyImageTransform() {
+    if (!tooltipImageFigure) return;
+    tooltipImageFigure.style.transform = `translate(-50%, -50%) translate(${imageState.x}px, ${imageState.y}px) scale(${imageState.scale})`;
+  }
+
+  function resetImageTransform() {
+    imageState.scale = 1;
+    imageState.x = 0;
+    imageState.y = 0;
+    imageState.pinchStartDistance = 0;
+    imageState.pinchStartScale = 1;
+    imageState.pointerIds.clear();
+    applyImageTransform();
+  }
+
+  function openTooltipImageModal(src, title) {
+    if (!tooltipImageModal || !tooltipImagePreview || !src) return;
+    tooltipImagePreview.src = src;
+    if (tooltipImageTitle) tooltipImageTitle.textContent = title || "Panduan";
+    tooltipImageModal.classList.add("is-open");
+    tooltipImageModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    resetImageTransform();
+  }
+
+  function closeTooltipImageModal() {
+    if (!tooltipImageModal || !tooltipImagePreview) return;
+    tooltipImageModal.classList.remove("is-open");
+    tooltipImageModal.setAttribute("aria-hidden", "true");
+    tooltipImagePreview.removeAttribute("src");
+    document.body.style.overflow = "";
+    resetImageTransform();
+  }
+
+  function adjustImageScale(multiplier) {
+    const next = Math.max(imageState.minScale, Math.min(imageState.maxScale, imageState.scale * multiplier));
+    imageState.scale = next;
+    if (next <= 1) {
+      imageState.x = 0;
+      imageState.y = 0;
+    }
+    applyImageTransform();
+  }
+
+  function pointerDistance(points) {
+    const values = Array.from(points.values());
+    if (values.length < 2) return 0;
+    const a = values[0];
+    const b = values[1];
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.sqrt((dx * dx) + (dy * dy));
+  }
+
+  tooltipButtons.forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (activeTooltipButton === btn && tooltipPopover && tooltipPopover.classList.contains("is-open")) {
+        closeTooltipPopover();
+        return;
+      }
+      openTooltipPopover(btn);
+    });
+  });
+
+  if (tooltipPreviewBtn) {
+    tooltipPreviewBtn.addEventListener("click", () => {
+      const title = activeTooltipButton ? (activeTooltipButton.dataset.tooltipTitle || "Panduan") : "Panduan";
+      const imageSrc = activeTooltipImage;
+      closeTooltipPopover();
+      openTooltipImageModal(imageSrc, title);
+    });
+  }
+
+  document.addEventListener("click", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof Node)) return;
+    if (tooltipPopover && tooltipPopover.contains(target)) return;
+    if (target instanceof HTMLElement && target.closest(".field-help-trigger")) return;
+    closeTooltipPopover();
+  });
+
+  window.addEventListener("resize", () => {
+    if (activeTooltipButton) positionTooltipPopover(activeTooltipButton);
+  });
+  window.addEventListener("scroll", () => {
+    if (activeTooltipButton) positionTooltipPopover(activeTooltipButton);
+  }, true);
+
+  if (tooltipImageBackdrop) tooltipImageBackdrop.addEventListener("click", closeTooltipImageModal);
+  if (tooltipImageClose) tooltipImageClose.addEventListener("click", closeTooltipImageModal);
+  if (tooltipZoomInBtn) tooltipZoomInBtn.addEventListener("click", () => adjustImageScale(1.2));
+  if (tooltipZoomOutBtn) tooltipZoomOutBtn.addEventListener("click", () => adjustImageScale(1 / 1.2));
+  if (tooltipResetBtn) tooltipResetBtn.addEventListener("click", resetImageTransform);
+
+  if (tooltipImageStage) {
+    tooltipImageStage.addEventListener("wheel", (ev) => {
+      if (!tooltipImageModal || !tooltipImageModal.classList.contains("is-open")) return;
+      ev.preventDefault();
+      adjustImageScale(ev.deltaY < 0 ? 1.12 : 1 / 1.12);
+    }, { passive: false });
+
+    tooltipImageStage.addEventListener("pointerdown", (ev) => {
+      if (!tooltipImageModal || !tooltipImageModal.classList.contains("is-open")) return;
+      tooltipImageStage.classList.add("is-dragging");
+      tooltipImageStage.setPointerCapture(ev.pointerId);
+      imageState.pointerIds.set(ev.pointerId, {
+        x: ev.clientX,
+        y: ev.clientY,
+        lastX: ev.clientX,
+        lastY: ev.clientY,
+      });
+      if (imageState.pointerIds.size === 2) {
+        imageState.pinchStartDistance = pointerDistance(imageState.pointerIds);
+        imageState.pinchStartScale = imageState.scale;
+      } else {
+        imageState.dragging = true;
+      }
+    });
+
+    tooltipImageStage.addEventListener("pointermove", (ev) => {
+      if (!tooltipImageModal || !tooltipImageModal.classList.contains("is-open")) return;
+      const point = imageState.pointerIds.get(ev.pointerId);
+      if (!point) return;
+
+      point.x = ev.clientX;
+      point.y = ev.clientY;
+
+      if (imageState.pointerIds.size === 2) {
+        const distance = pointerDistance(imageState.pointerIds);
+        if (imageState.pinchStartDistance > 0) {
+          imageState.scale = Math.max(
+            imageState.minScale,
+            Math.min(imageState.maxScale, imageState.pinchStartScale * (distance / imageState.pinchStartDistance))
+          );
+          applyImageTransform();
+        }
+        return;
+      }
+
+      if (!imageState.dragging || imageState.scale <= 1) return;
+      imageState.x += ev.clientX - point.lastX;
+      imageState.y += ev.clientY - point.lastY;
+      point.lastX = ev.clientX;
+      point.lastY = ev.clientY;
+      applyImageTransform();
+    });
+
+    const stopPointer = (ev) => {
+      imageState.pointerIds.delete(ev.pointerId);
+      imageState.dragging = false;
+      if (tooltipImageStage) tooltipImageStage.classList.remove("is-dragging");
+      if (imageState.pointerIds.size < 2) {
+        imageState.pinchStartDistance = 0;
+        imageState.pinchStartScale = imageState.scale;
+      }
+    };
+
+    tooltipImageStage.addEventListener("pointerup", stopPointer);
+    tooltipImageStage.addEventListener("pointercancel", stopPointer);
+    tooltipImageStage.addEventListener("pointerleave", stopPointer);
+  }
+
   addMaterialBtn.addEventListener("click", () => addMaterialRow());
 
   function openSidebar() {
@@ -308,7 +588,10 @@
   if (closeHelpFooterBtn) closeHelpFooterBtn.addEventListener("click", closeHelpModal);
   if (closeHelpBackdrop) closeHelpBackdrop.addEventListener("click", closeHelpModal);
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape") closeHelpModal();
+    if (ev.key !== "Escape") return;
+    closeTooltipPopover();
+    closeTooltipImageModal();
+    closeHelpModal();
   });
 
   function serializeState() {
@@ -399,6 +682,7 @@
       form.reset();
       defaultMaterials();
       setError("");
+      resetHeroSummary();
       // Ensure required numeric field stays at HTML default after reset.
       const t = form.querySelector('[name="target_output_qty"]');
       if (t && (!t.value || String(t.value).trim() === "")) t.value = "100";
@@ -491,6 +775,7 @@
     renderIterations(d.iterations);
     renderExcelResult(d);
     renderSummaryRow(d);
+    renderHeroSummary(d);
 
     scheduleSave();
   });
@@ -646,4 +931,6 @@
 
     tbody.appendChild(tr);
   }
+
+  resetHeroSummary();
 })();

@@ -11,6 +11,7 @@ use App\Support\Session;
 use App\Support\View;
 use App\Support\Csrf;
 use App\Support\AdminAccess;
+use App\Support\HomePath;
 
 final class DashboardController
 {
@@ -23,6 +24,12 @@ final class DashboardController
         }
 
         $auth = Session::get('auth');
+        if (! HomePath::dashboardAllowed(is_array($auth) ? $auth : null)) {
+            Session::flash('error', 'Dashboard history hanya tersedia untuk plan Medium dan Pro.');
+            Response::redirect('/calculator');
+            return;
+        }
+
         $email = is_array($auth) ? (string) ($auth['email'] ?? '') : '';
         $userId = is_array($auth) ? (int) ($auth['user_id'] ?? 0) : 0;
         $dashboard = new DashboardService();

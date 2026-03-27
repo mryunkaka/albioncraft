@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#f4f8ff"/>
+  <rect x="36" y="36" width="1128" height="648" rx="28" fill="#ffffff" stroke="#d3e0ff" stroke-width="4"/>
+  <text x="70" y="95" fill="#173b7a" font-size="34" font-family="Arial, sans-serif" font-weight="700">Cara Isi Material</text>
+  <text x="70" y="132" fill="#5a6f90" font-size="20" font-family="Arial, sans-serif">Setiap baris material mewakili kebutuhan bahan per recipe.</text>
+
+  <rect x="80" y="190" width="1040" height="92" rx="20" fill="#f8fafc" stroke="#dbeafe" stroke-width="3"/>
+  <text x="110" y="245" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">Nama Item</text>
+  <text x="345" y="245" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">Qty</text>
+  <text x="505" y="245" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">Harga</text>
+  <text x="685" y="245" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">RR</text>
+  <text x="840" y="245" fill="#334155" font-size="22" font-family="Arial, sans-serif" font-weight="700">Kota Beli</text>
+
+  <rect x="80" y="330" width="1040" height="200" rx="24" fill="#edf4ff" stroke="#c2d7ff" stroke-width="3"/>
+  <text x="120" y="385" fill="#173b7a" font-size="24" font-family="Arial, sans-serif" font-weight="700">Arti Kolom</text>
+  <text x="120" y="425" fill="#374b69" font-size="19" font-family="Arial, sans-serif">• Nama Item: nama material yang dibeli atau dipakai.</text>
+  <text x="120" y="458" fill="#374b69" font-size="19" font-family="Arial, sans-serif">• Qty: kebutuhan material per sekali recipe.</text>
+  <text x="120" y="491" fill="#374b69" font-size="19" font-family="Arial, sans-serif">• Harga: harga beli satuan material.</text>
+  <text x="120" y="524" fill="#374b69" font-size="19" font-family="Arial, sans-serif">• RR: pilih RETURN jika material mendapat return, NON_RETURN jika habis total.</text>
+
+  <rect x="170" y="580" width="860" height="60" rx="18" fill="#eefbf4" stroke="#bfe5cc" stroke-width="3"/>
+  <text x="210" y="618" fill="#135b38" font-size="20" font-family="Arial, sans-serif">Tambahkan satu baris per material. Kalau bahan tidak dapat return, ubah RR ke NON_RETURN.</text>
+</svg>

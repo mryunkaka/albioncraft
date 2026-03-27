@@ -11,6 +11,7 @@ use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
 use App\Support\View;
+use App\Support\HomePath;
 
 final class AuthController
 {
@@ -48,7 +49,8 @@ final class AuthController
     public function showLogin(Request $request): void
     {
         if (Session::has('auth')) {
-            Response::redirect('/dashboard');
+            $auth = Session::get('auth');
+            Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
             return;
         }
 
@@ -93,13 +95,15 @@ final class AuthController
 
         AuthRateLimiter::clear('login', $request);
         Session::flash('success', 'Login berhasil.');
-        Response::redirect('/dashboard');
+        $auth = Session::get('auth');
+        Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
     }
 
     public function showRegister(Request $request): void
     {
         if (Session::has('auth')) {
-            Response::redirect('/dashboard');
+            $auth = Session::get('auth');
+            Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
             return;
         }
 

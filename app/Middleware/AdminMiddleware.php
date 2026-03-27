@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Support\AdminAccess;
+use App\Support\HomePath;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -26,8 +27,7 @@ final class AdminMiddleware implements MiddlewareInterface
         }
 
         Session::flash('error', 'Akses ditolak. Hanya admin yang diizinkan.');
-        Response::redirect('/dashboard');
+        Response::redirect(HomePath::forAuth($auth));
         return false;
     }
 }
-
