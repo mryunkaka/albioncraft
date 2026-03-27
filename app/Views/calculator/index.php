@@ -250,6 +250,60 @@
       background: rgba(255, 255, 255, .92);
     }
 
+    .analysis-recommendation {
+      margin-bottom: 1rem;
+      padding: 1rem 1.125rem;
+      border: 1px solid #bbf7d0;
+      border-radius: 1rem;
+      background:
+        linear-gradient(180deg, rgba(240, 253, 244, .98), rgba(236, 253, 245, .95));
+    }
+
+    .analysis-recommendation[hidden] {
+      display: none !important;
+    }
+
+    .analysis-recommendation-title {
+      margin: 0 0 .75rem;
+      font-size: .95rem;
+      font-weight: 700;
+      color: #166534;
+    }
+
+    .analysis-recommendation-list {
+      display: grid;
+      gap: .65rem;
+    }
+
+    .analysis-recommendation-item {
+      display: grid;
+      gap: .15rem;
+      padding: .7rem .8rem;
+      border: 1px solid #d1fae5;
+      border-radius: .85rem;
+      background: rgba(255, 255, 255, .72);
+    }
+
+    .analysis-recommendation-label {
+      font-weight: 700;
+      color: #14532d;
+    }
+
+    .analysis-recommendation-value {
+      color: #166534;
+      white-space: pre-wrap;
+    }
+
+    .summary-action-cell {
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .summary-copy-button {
+      min-width: 3rem;
+      padding-inline: .7rem;
+    }
+
     @media (max-width: 640px) {
       .tooltip-popover {
         left: .75rem !important;
@@ -591,6 +645,10 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 
 <section class="card animate-fade-in-up">
   <h2 class="card-title">Result</h2>
+  <div id="analysis-recommendation" class="analysis-recommendation" hidden>
+    <div class="analysis-recommendation-title">Rekomendasi Hasil Analisa</div>
+    <div id="analysis-recommendation-list" class="analysis-recommendation-list"></div>
+  </div>
   <div class="table-wrap">
     <table class="table table-summary" id="summary-row">
       <thead>
@@ -607,6 +665,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
           <th class="right">PROD COST / ITEM</th>
           <th class="right">TOTAL PROFIT</th>
           <th class="right">PROFIT / ITEM</th>
+          <th>AKSI</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -753,5 +812,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 <script id="calculator-tooltip-map" type="application/json">
   <?= json_encode($calculatorTooltips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 </script>
-<script src="/assets/calculator.js?v=20260327-03"></script>
+<script src="/assets/calculator.js?v=20260327-05"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

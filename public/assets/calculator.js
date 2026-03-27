@@ -59,8 +59,11 @@
   const saveSellPriceBtn = document.getElementById("save-sell-price-btn");
   const saveMaterialPricesBtn = document.getElementById("save-material-prices-btn");
   const recipeRecommendations = document.getElementById("recipe-recommendations");
+  const analysisRecommendation = document.getElementById("analysis-recommendation");
+  const analysisRecommendationList = document.getElementById("analysis-recommendation-list");
   const calculatorCitiesData = document.getElementById("calculator-cities-data");
   const cityOptions = parseCityOptions();
+  let lastRenderedAnalysisText = "";
 
   function upper(v) {
     return String(v || "").toUpperCase();
@@ -504,6 +507,205 @@
   function fmtPercent(n) {
     if (typeof n !== "number" || !Number.isFinite(n)) return "-";
     return n.toFixed(2) + "%";
+  }
+
+  function getCityNameById(cityId) {
+    const targetId = Number(cityId || 0);
+    if (!targetId) return "";
+    const match = cityOptions.find((row) => Number(row.id || 0) === targetId);
+    return match ? String(match.name || "") : "";
+  }
+
+  function collectMaterialAnalysisRows() {
+    const rows = [];
+    const materialRows = materialsRoot ? materialsRoot.querySelectorAll(".calc-material-row") : [];
+
+    for (const row of materialRows) {
+      const nameField = row.querySelector(".material-name");
+      const cityField = row.querySelector(".material-city");
+      const priceField = row.querySelector(".material-price");
+      const qtyField = row.querySelector(".material-qty");
+      const typeField = row.querySelector(".material-type");
+
+      const name = String(nameField && "value" in nameField ? nameField.value : "").trim();
+      const cityId = Number(cityField && "value" in cityField ? cityField.value : 0);
+      const cityName = getCityNameById(cityId);
+      const buyPrice = Number(priceField && "value" in priceField ? priceField.value : NaN);
+      const qtyPerRecipe = Number(qtyField && "value" in qtyField ? qtyField.value : NaN);
+      const returnType = String(typeField && "value" in typeField ? typeField.value : "").trim();
+
+      rows.push({
+        name,
+        cityId,
+        cityName,
+        buyPrice,
+        qtyPerRecipe,
+        returnType,
+        totalSpend: Number.isFinite(buyPrice) && Number.isFinite(qtyPerRecipe) ? (buyPrice * qtyPerRecipe) : NaN,
+      });
+    }
+
+    return rows;
+  }
+
+  function buildAnalysisRecommendations() {
+    const recommendations = [];
+    const materialRows = collectMaterialAnalysisRows();
+    const pricedMaterials = materialRows.filter((row) => row.name && row.cityId > 0 && Number.isFinite(row.buyPrice));
+
+    if (pricedMaterials.length > 0) {
+      const materialLines = pricedMaterials.map((row, index) => {
+        const qtyText = Number.isFinite(row.qtyPerRecipe) ? `${Number(row.qtyPerRecipe)}` : "-";
+        const reasonParts = [`${row.name} di ${row.cityName} @ ${fmtMoney(row.buyPrice)}`];
+        if (qtyText !== "-") {
+          reasonParts.push(`qty/recipe ${qtyText}`);
+        }
+        return `${index + 1}. ${reasonParts.join(" | ")}`;
+      });
+
+      recommendations.push({
+        label: "Bahan yang dipakai",
+        value: materialLines.join("\n"),
+      });
+    } else {
+      recommendations.push({
+        label: "Bahan yang dipakai",
+        value: "Belum ada data kota dan harga bahan yang valid.",
+      });
+    }
+
+    const totalMaterialCost = pricedMaterials
+      .filter((row) => Number.isFinite(row.totalSpend))
+      .reduce((sum, row) => sum + row.totalSpend, 0);
+
+    if (pricedMaterials.length > 0) {
+      const cheapestSource = pricedMaterials
+        .slice()
+        .sort((a, b) => {
+          if (a.buyPrice !== b.buyPrice) return a.buyPrice - b.buyPrice;
+          return a.name.localeCompare(b.name);
+        })[0];
+
+      recommendations.push({
+        label: "Rekomendasi beli bahan",
+        value: `Ambil ${cheapestSource.name} di ${cheapestSource.cityName} karena harga input paling rendah (${fmtMoney(cheapestSource.buyPrice)}). Total modal bahan dari input saat ini ${fmtMoney(totalMaterialCost)}.`,
+      });
+    }
+
+    const bonusLocalCityId = Number((bonusLocalCitySelect && bonusLocalCitySelect.value) || 0);
+    const bonusLocalCity = getCityNameById(bonusLocalCityId);
+    const bonusLocalValue = Number(form.querySelector('[name="bonus_local"]')?.value || 0);
+    const craftFeeCityId = Number((craftFeeCitySelect && craftFeeCitySelect.value) || 0);
+    const craftFeeCity = getCityNameById(craftFeeCityId);
+    const craftFeeValue = Number(form.querySelector('[name="usage_fee"]')?.value || 0);
+
+    if (bonusLocalCity && bonusLocalValue > 0 && craftFeeCity) {
+      const sameCity = bonusLocalCityId > 0 && bonusLocalCityId === craftFeeCityId;
+      recommendations.push({
+        label: "Rekomendasi craft",
+        value: sameCity
+          ? `${craftFeeCity} cocok untuk craft karena bonus local ${bonusLocalValue.toFixed(0)}% dan craft fee ${fmtMoney(craftFeeValue)} ada di kota yang sama.`
+          : `${bonusLocalCity} unggul untuk hemat bahan karena bonus local ${bonusLocalValue.toFixed(0)}%, sedangkan data craft fee yang Anda pakai berasal dari ${craftFeeCity} sebesar ${fmtMoney(craftFeeValue)}.`,
+      });
+    } else if (bonusLocalCity && bonusLocalValue > 0) {
+      recommendations.push({
+        label: "Rekomendasi craft",
+        value: `${bonusLocalCity} layak diprioritaskan untuk craft karena bonus local ${bonusLocalValue.toFixed(0)}% paling berpengaruh ke efisiensi bahan pada input ini.`,
+      });
+    } else if (craftFeeCity) {
+      recommendations.push({
+        label: "Rekomendasi craft",
+        value: `${craftFeeCity} dipakai sebagai acuan craft karena craft fee input ada di kota ini (${fmtMoney(craftFeeValue)}). Bonus local belum diisi, jadi belum ada pembanding efisiensi bahan.`,
+      });
+    }
+
+    const sellCityId = Number((sellPriceCitySelect && sellPriceCitySelect.value) || 0);
+    const sellCity = getCityNameById(sellCityId);
+    const sellPriceValue = Number(form.querySelector('[name="sell_price"]')?.value || 0);
+    if (sellCity && Number.isFinite(sellPriceValue) && sellPriceValue > 0) {
+      recommendations.push({
+        label: "Rekomendasi jual",
+        value: `${sellCity} menjadi tujuan jual pada analisa ini karena harga market input diset ${fmtMoney(sellPriceValue)} di kota tersebut.`,
+      });
+    }
+
+    return recommendations;
+  }
+
+  function renderAnalysisRecommendation(d) {
+    if (!analysisRecommendation || !analysisRecommendationList) return;
+    const recommendations = buildAnalysisRecommendations();
+    lastRenderedAnalysisText = recommendations
+      .map((item) => `${item.label}\n${item.value}`)
+      .join("\n\n");
+
+    analysisRecommendationList.innerHTML = recommendations
+      .map((item) => `<div class="analysis-recommendation-item"><div class="analysis-recommendation-label">${item.label}</div><div class="analysis-recommendation-value">${item.value}</div></div>`)
+      .join("");
+    analysisRecommendation.hidden = false;
+  }
+
+  function resetAnalysisRecommendation() {
+    if (!analysisRecommendation || !analysisRecommendationList) return;
+    analysisRecommendation.hidden = true;
+    analysisRecommendationList.innerHTML = "";
+    lastRenderedAnalysisText = "";
+  }
+
+  async function copyTextToClipboard(text) {
+    if (!text) return false;
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (_) {
+      ok = false;
+    }
+    textarea.remove();
+    return ok;
+  }
+
+  function buildCopyPayload(d, itemName, materialList) {
+    const sc = d && d.scenario ? d.scenario : null;
+    const profitMap = new Map();
+    if (Array.isArray(d.profit_targets)) {
+      for (const r of d.profit_targets) {
+        profitMap.set(Number(r.target_margin_percent), r);
+      }
+    }
+
+    const p5 = profitMap.get(5);
+    const p10 = profitMap.get(10);
+    const p15 = profitMap.get(15);
+    const rows = [
+      ["NAMA ITEM", itemName || "-"],
+      ["QTY", d.total_output != null ? String(d.total_output) : "-"],
+      ["HARGA MARKET", sc && sc.sell_price != null ? fmtMoney(Number(sc.sell_price)) : "-"],
+      ["MARGIN", sc && sc.margin_percent != null ? fmtPercent(Number(sc.margin_percent)) : "-"],
+      ["SRP 5%", p5 && p5.srp != null ? fmtMoney(Number(p5.srp)) : fmtMoney(Number(d.srp_5))],
+      ["SRP 10%", p10 && p10.srp != null ? fmtMoney(Number(p10.srp)) : fmtMoney(Number(d.srp_10))],
+      ["SRP 15%", p15 && p15.srp != null ? fmtMoney(Number(p15.srp)) : fmtMoney(Number(d.srp_15))],
+      ["MATERIAL LIST TO BUY", materialList || "-"],
+      ["PRODUCTION COST", d.production_cost != null ? fmtMoney(Number(d.production_cost)) : "-"],
+      ["PROD COST / ITEM", d.production_cost_per_item != null ? fmtMoney(Number(d.production_cost_per_item)) : "-"],
+      ["TOTAL PROFIT", sc && sc.total_profit != null ? fmtMoney(Number(sc.total_profit)) : "-"],
+      ["PROFIT / ITEM", sc && sc.profit_per_item != null ? fmtMoney(Number(sc.profit_per_item)) : "-"],
+    ];
+
+    const summaryTable = rows.map((row) => row.join("\t")).join("\n");
+    return `RESULT SUMMARY\n${summaryTable}${lastRenderedAnalysisText ? `\n\nANALISA\n${lastRenderedAnalysisText}` : ""}`;
   }
 
   function renderHeroSummary(d) {
@@ -1168,6 +1370,7 @@
     renderExcelResult(d);
     renderSummaryRow(d);
     renderHeroSummary(d);
+    renderAnalysisRecommendation(d);
 
     scheduleSave();
   });
@@ -1321,8 +1524,26 @@
     tr.appendChild(tdBadgeMoney(sc && sc.total_profit != null ? sc.total_profit : null));
     tr.appendChild(tdBadgeMoney(sc && sc.profit_per_item != null ? sc.profit_per_item : null));
 
+    const actionCell = document.createElement("td");
+    actionCell.className = "summary-action-cell";
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "button button-ghost summary-copy-button";
+    copyBtn.textContent = "Salin";
+    copyBtn.addEventListener("click", async () => {
+      const originalText = copyBtn.textContent;
+      const copied = await copyTextToClipboard(buildCopyPayload(d, itemName, materialList));
+      copyBtn.textContent = copied ? "Tersalin" : "Gagal";
+      window.setTimeout(() => {
+        copyBtn.textContent = originalText;
+      }, 1400);
+    });
+    actionCell.appendChild(copyBtn);
+    tr.appendChild(actionCell);
+
     tbody.appendChild(tr);
   }
 
   resetHeroSummary();
+  resetAnalysisRecommendation();
 })();
