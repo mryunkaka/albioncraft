@@ -579,16 +579,26 @@
       .reduce((sum, row) => sum + row.totalSpend, 0);
 
     if (pricedMaterials.length > 0) {
-      const cheapestSource = pricedMaterials
-        .slice()
-        .sort((a, b) => {
-          if (a.buyPrice !== b.buyPrice) return a.buyPrice - b.buyPrice;
-          return a.name.localeCompare(b.name);
-        })[0];
+      const cheapestByMaterial = [];
+      const materialMap = new Map();
+
+      for (const row of pricedMaterials) {
+        const key = row.name.trim().toUpperCase();
+        const current = materialMap.get(key) || null;
+        if (!current || row.buyPrice < current.buyPrice) {
+          materialMap.set(key, row);
+        }
+      }
+
+      for (const row of materialMap.values()) {
+        cheapestByMaterial.push(
+          `${row.name} di ${row.cityName} karena harga input paling rendah (${fmtMoney(row.buyPrice)}).`
+        );
+      }
 
       recommendations.push({
         label: "Rekomendasi beli bahan",
-        value: `Ambil ${cheapestSource.name} di ${cheapestSource.cityName} karena harga input paling rendah (${fmtMoney(cheapestSource.buyPrice)}). Total modal bahan dari input saat ini ${fmtMoney(totalMaterialCost)}.`,
+        value: `${cheapestByMaterial.join("\n")} Total modal bahan dari input saat ini ${fmtMoney(totalMaterialCost)}.`,
       });
     }
 
