@@ -111,3 +111,5 @@
   - status saat ini: feedback result/error list + sample template + retain input saat partial error sudah ditambahkan
 - User guidance / operational docs
   - status saat ini: panduan baca market + mapping ke calculator tersedia di `docs/17-market-analysis-guide.md`
+- Release readiness
+  - checklist final tersedia di `docs/18-final-pre-release-checklist.md`

@@ -28,6 +28,7 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 | 15-sql-index-hardening.sql | done | SQL patch index hardening untuk query list/filter/pagination |
 | 16-manual-qa-checklist.md | done | Checklist QA manual UI untuk price-data, recipe auto-fill, dan dashboard |
 | 17-market-analysis-guide.md | done | Panduan baca market dan mapping ke calculator berdasarkan materi referensi user |
+| 18-final-pre-release-checklist.md | done | Checklist final sebelum QA/deploy/handoff |
 
 ## Keputusan Final yang Sudah Dikunci
 - Bahasa dokumen: Indonesia.
@@ -262,6 +263,9 @@ Status global: in-progress (calculator, auth, middleware subscription/plan gatin
 - Dokumentasi user guidance tambahan sudah ditambahkan:
   - `docs/17-market-analysis-guide.md`
   - merangkum cara baca market dan pemetaan input spreadsheet/Famouzak ke calculator project
+- Dokumentasi penutupan/release readiness sudah ditambahkan:
+  - `docs/18-final-pre-release-checklist.md`
+  - dipakai untuk final verification sebelum QA/deploy
 
 ## Catatan Hosting (Penting)
 - Jika domain menampilkan 403 `Server unable to read htaccess file`, itu bukan masalah database atau PHP code.
@@ -298,4 +302,4 @@ php tests/run_all_tests.php
    - status saat ini: summary validation/auth error + old input auth lebih aman sudah ditambahkan
    - throttling endpoint API sensitif non-auth sudah diterapkan untuk `POST /api/calculate`
 4. Tambahkan test edge case tambahan + verifikasi hasil vs spreadsheet.
-5. Review akhir production checklist setelah QA manual selesai.
+5. Jalankan final verification memakai `docs/18-final-pre-release-checklist.md` setelah QA manual selesai.
