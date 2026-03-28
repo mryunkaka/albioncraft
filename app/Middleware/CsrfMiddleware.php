@@ -18,12 +18,22 @@ final class CsrfMiddleware implements MiddlewareInterface
             return true;
         }
 
-        Session::flash('error', 'CSRF token tidak valid. Silakan ulangi.');
         $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '/login');
         $path = parse_url($referer, PHP_URL_PATH);
         $redirectTo = is_string($path) && $path !== '' ? $path : '/login';
+
+        if ($request->isAjax()) {
+            Response::json([
+                'success' => false,
+                'message' => 'CSRF token tidak valid. Reload halaman calculator lalu coba lagi.',
+                'error_code' => 'CSRF_INVALID',
+                'redirect_to' => $redirectTo,
+            ], 419);
+            return false;
+        }
+
+        Session::flash('error', 'CSRF token tidak valid. Silakan ulangi.');
         Response::redirect($redirectTo);
         return false;
     }
 }
-

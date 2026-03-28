@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Services\CalculationEngineService;
 use App\Services\CalculationHistoryService;
+use App\Services\ItemMasterService;
 use App\Services\MarketPriceService;
 use App\Services\RecipeAutoFillService;
 use App\Support\AdminAccess;
@@ -36,6 +37,7 @@ final class CalculatorController
     {
         $payload = $request->json();
         $service = new CalculationEngineService();
+        $masterSync = null;
 
         try {
             $result = $service->calculate($payload);
@@ -55,6 +57,38 @@ final class CalculatorController
         }
 
         $auth = Session::get('auth');
+        if (is_array($auth) && isset($auth['user_id'])) {
+            try {
+                $itemMasterService = new ItemMasterService();
+                $masterSync = $itemMasterService->syncCalculatorInputMasterData((int) $auth['user_id'], $payload);
+                if (($masterSync['ok'] ?? false) === true && is_array($masterSync['data'] ?? null)) {
+                    $syncedItem = is_array($masterSync['data']['item'] ?? null) ? $masterSync['data']['item'] : null;
+                    if ($syncedItem !== null && isset($syncedItem['id'])) {
+                        $payload['item_id'] = (int) $syncedItem['id'];
+                    }
+
+                    $syncedMaterials = is_array($masterSync['data']['materials'] ?? null) ? $masterSync['data']['materials'] : [];
+                    if (is_array($payload['materials'] ?? null)) {
+                        foreach ($payload['materials'] as $index => $material) {
+                            if (! is_array($material)) {
+                                continue;
+                            }
+
+                            $syncedMaterial = is_array($syncedMaterials[$index] ?? null) ? $syncedMaterials[$index] : null;
+                            if ($syncedMaterial === null) {
+                                continue;
+                            }
+
+                            $payload['materials'][$index]['item_id'] = (int) ($syncedMaterial['id'] ?? 0);
+                            $payload['materials'][$index]['item_value'] = (float) ($syncedMaterial['item_value'] ?? 0);
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                // Sync master item tidak boleh memblokir response calculator.
+            }
+        }
+
         try {
             $autoFillService = new RecipeAutoFillService();
             $autoFillService->storeCalculatedRecipe(is_array($auth) ? $auth : null, $payload);
@@ -74,6 +108,9 @@ final class CalculatorController
         Response::json([
             'success' => true,
             'data' => $result,
+            'meta' => [
+                'master_sync' => $masterSync,
+            ],
         ]);
     }
 
@@ -96,6 +133,54 @@ final class CalculatorController
 
         $service = new RecipeAutoFillService();
         $result = $service->recipeDetail($entryReference, $cityId > 0 ? $cityId : null, is_array($auth) ? $auth : null);
+
+        Response::json([
+            'success' => $result['ok'],
+            'message' => $result['message'],
+            'data' => $result['data'] ?? null,
+        ], $result['ok'] ? 200 : 422);
+    }
+
+    public function itemSearch(Request $request): void
+    {
+        $service = new MarketPriceService();
+        $q = (string) $request->input('q', '');
+
+        Response::json([
+            'success' => true,
+            'data' => $service->itemOptions($q),
+        ]);
+    }
+
+    public function csrfToken(Request $request): void
+    {
+        $auth = Session::get('auth');
+        if (! is_array($auth) || ! isset($auth['user_id'])) {
+            Response::json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+            return;
+        }
+
+        Response::json([
+            'success' => true,
+            'data' => [
+                'csrf_token' => Csrf::token(),
+            ],
+        ]);
+    }
+
+    public function persistSelectionHelper(Request $request): void
+    {
+        $auth = Session::get('auth');
+        if (! is_array($auth) || ! isset($auth['user_id'])) {
+            Response::json(['success' => false, 'message' => 'Unauthorized'], 401);
+            return;
+        }
+
+        $service = new ItemMasterService();
+        $result = $service->persistSelectionHelper((int) $auth['user_id'], $request->post());
 
         Response::json([
             'success' => $result['ok'],

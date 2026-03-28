@@ -15,6 +15,16 @@ final class SubscriptionMiddleware implements MiddlewareInterface
     {
         $auth = Session::get('auth');
         if (! is_array($auth) || ! isset($auth['user_id'])) {
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false,
+                    'message' => 'Silakan login dulu. Session user untuk sinkronisasi plan tidak ditemukan.',
+                    'error_code' => 'AUTH_REQUIRED',
+                    'redirect_to' => '/login',
+                ], 401);
+                return false;
+            }
+
             Session::flash('error', 'Silakan login dulu.');
             Response::redirect('/login');
             return false;
@@ -27,6 +37,17 @@ final class SubscriptionMiddleware implements MiddlewareInterface
         if ($user === null) {
             Session::destroy();
             Session::start();
+
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false,
+                    'message' => 'Session tidak valid atau plan user gagal disinkronkan. Silakan login ulang.',
+                    'error_code' => 'SESSION_INVALID',
+                    'redirect_to' => '/login',
+                ], 401);
+                return false;
+            }
+
             Session::flash('error', 'Session tidak valid, silakan login ulang.');
             Response::redirect('/login');
             return false;
@@ -45,4 +66,3 @@ final class SubscriptionMiddleware implements MiddlewareInterface
         return true;
     }
 }
-

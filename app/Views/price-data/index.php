@@ -12,7 +12,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 ?>
       <section class="page-header">
         <h1 class="page-title">Data Harga (PRO)</h1>
-        <p class="page-subtitle">Search, filter, pagination server-side, dan simpan/update harga item.</p>
+        <p class="page-subtitle">Search, filter, pagination server-side, dan simpan/update harga item. Plan PRO melihat semua data harga, tetapi edit/delete tetap hanya untuk data milik akun aktif.</p>
       </section>
 
       <?php if (!empty($flash_error)): ?>
@@ -151,6 +151,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
             <thead>
             <tr>
               <th>ID</th>
+              <th>Owner</th>
               <th>Item</th>
               <th>Code</th>
               <th>City</th>
@@ -163,7 +164,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
             </tr>
             </thead>
             <tbody id="price-table-body">
-              <tr><td colspan="10">Loading...</td></tr>
+              <tr><td colspan="11">Loading...</td></tr>
             </tbody>
           </table>
         </div>
@@ -178,8 +179,9 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
   </div>
   <script>
     window.__PRICE_DATA__ = {
-      csrfToken: <?= json_encode((string) ($csrf_token ?? ''), JSON_UNESCAPED_UNICODE) ?>
+      csrfToken: <?= json_encode((string) ($csrf_token ?? ''), JSON_UNESCAPED_UNICODE) ?>,
+      canViewAllPrices: <?= json_encode((bool) ($can_view_all_prices ?? false)) ?>
     };
   </script>
-  <script src="/assets/price-data.js?v=20260326-2"></script>
+  <script src="/assets/price-data.js?v=20260329-01"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

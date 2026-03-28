@@ -198,6 +198,7 @@ final class RecipeAutoFillService
                 'item_id' => $materialItemId,
                 'item_code' => (string) ($row['material_item_code'] ?? ''),
                 'name' => (string) ($row['material_name'] ?? ''),
+                'item_value' => (float) ($row['material_item_value'] ?? 0),
                 'qty_per_recipe' => (float) ($row['qty_per_recipe'] ?? 0),
                 'buy_price' => (float) ($materialPriceMap[$materialItemId] ?? 0),
                 'return_type' => (string) ($row['return_type'] ?? 'RETURN'),
@@ -300,11 +301,23 @@ final class RecipeAutoFillService
             ? (string) (($auth['username'] ?? $auth['email'] ?? 'User'))
             : 'Tanpa Login';
         $planCode = $userId > 0 ? (string) ($auth['plan_code'] ?? 'FREE') : 'GUEST';
+        $ownerScope = $userId > 0 ? 'USER' : 'GUEST';
+
+        $duplicate = $this->savedRecipes->findExactDuplicate(
+            $userId > 0 ? $userId : null,
+            $ownerScope,
+            isset($input['item_id']) ? (int) $input['item_id'] : null,
+            $itemName,
+            $snapshot
+        );
+        if ($duplicate !== null) {
+            return (int) ($duplicate['id'] ?? 0);
+        }
 
         return $this->savedRecipes->create([
             'user_id' => $userId > 0 ? $userId : null,
             'owner_label' => $ownerLabel,
-            'owner_scope' => $userId > 0 ? 'USER' : 'GUEST',
+            'owner_scope' => $ownerScope,
             'plan_code' => $planCode,
             'item_id' => isset($input['item_id']) ? (int) $input['item_id'] : null,
             'item_name' => $itemName,
@@ -356,6 +369,7 @@ final class RecipeAutoFillService
                 'item_id' => isset($material['item_id']) ? (int) $material['item_id'] : 0,
                 'item_code' => '',
                 'name' => (string) ($material['name'] ?? ''),
+                'item_value' => (float) ($material['item_value'] ?? 0),
                 'qty_per_recipe' => (float) ($material['qty_per_recipe'] ?? 0),
                 'buy_price' => (float) ($material['buy_price'] ?? 0),
                 'return_type' => (string) ($material['return_type'] ?? 'RETURN'),

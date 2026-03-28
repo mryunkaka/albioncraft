@@ -33,7 +33,7 @@ final class MarketPriceService
      *   last_page: int
      * }
      */
-    public function listByUser(int $userId, array $query): array
+    public function listForViewer(int $viewerUserId, array $query, bool $showAll = false): array
     {
         $keyword = trim((string) ($query['q'] ?? ''));
         $priceType = strtoupper(trim((string) ($query['price_type'] ?? '')));
@@ -47,12 +47,28 @@ final class MarketPriceService
             $perPage = 20;
         }
 
-        $result = $this->prices->paginateByUser($userId, $keyword, $priceType, $cityId, $page, $perPage);
+        $result = $this->prices->paginateByViewer($viewerUserId, $showAll, $keyword, $priceType, $cityId, $page, $perPage);
         $total = (int) $result['total'];
         $lastPage = max(1, (int) ceil($total / $perPage));
+        $rows = array_map(
+            static function (array $row) use ($viewerUserId): array {
+                $rowUserId = (int) ($row['user_id'] ?? 0);
+                $username = trim((string) ($row['username'] ?? ''));
+                $email = trim((string) ($row['email'] ?? ''));
+                $ownerLabel = $username !== ''
+                    ? $username
+                    : ($email !== '' ? $email : ('User #' . $rowUserId));
+
+                $row['owner_label'] = $ownerLabel;
+                $row['is_own_data'] = $rowUserId > 0 && $rowUserId === $viewerUserId;
+                $row['can_manage'] = $rowUserId > 0 && $rowUserId === $viewerUserId;
+                return $row;
+            },
+            $result['rows']
+        );
 
         return [
-            'rows' => $result['rows'],
+            'rows' => $rows,
             'total' => $total,
             'page' => $page,
             'per_page' => $perPage,

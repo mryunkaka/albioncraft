@@ -24,6 +24,8 @@ final class PriceDataController
         }
 
         $service = new MarketPriceService();
+        $planCode = strtoupper((string) ($auth['plan_code'] ?? 'FREE'));
+        $canViewAllPrices = $planCode === 'PRO';
 
         Response::html(View::render('price-data/index', [
             'auth' => $auth,
@@ -31,6 +33,7 @@ final class PriceDataController
             'cities' => $service->cityOptions(),
             'item_options' => $service->itemOptions(),
             'is_admin' => AdminAccess::isAdminEmail((string) ($auth['email'] ?? '')),
+            'can_view_all_prices' => $canViewAllPrices,
             'csrf_token' => Csrf::token(),
             'flash_success' => Session::pullFlash('success'),
             'flash_error' => Session::pullFlash('error'),
@@ -46,7 +49,8 @@ final class PriceDataController
         }
 
         $service = new MarketPriceService();
-        $data = $service->listByUser((int) $auth['user_id'], $request->query());
+        $planCode = strtoupper((string) ($auth['plan_code'] ?? 'FREE'));
+        $data = $service->listForViewer((int) $auth['user_id'], $request->query(), $planCode === 'PRO');
 
         Response::json(['success' => true, 'data' => $data]);
     }

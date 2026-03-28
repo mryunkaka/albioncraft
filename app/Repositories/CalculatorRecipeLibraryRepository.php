@@ -37,6 +37,52 @@ final class CalculatorRecipeLibraryRepository
     /**
      * @return array<string, mixed>|null
      */
+    public function findExactDuplicate(
+        ?int $userId,
+        string $ownerScope,
+        ?int $itemId,
+        string $itemName,
+        string $inputSnapshot
+    ): ?array {
+        $params = [
+            'owner_scope' => $ownerScope,
+            'item_name' => $itemName,
+            'input_snapshot' => $inputSnapshot,
+        ];
+
+        $where = [];
+        if ($userId === null) {
+            $where[] = 'user_id IS NULL';
+        } else {
+            $where[] = 'user_id = :user_id';
+            $params['user_id'] = $userId;
+        }
+
+        if ($itemId === null) {
+            $where[] = 'item_id IS NULL';
+        } else {
+            $where[] = 'item_id = :item_id';
+            $params['item_id'] = $itemId;
+        }
+
+        $sql = 'SELECT *
+                FROM calculator_recipe_library
+                WHERE ' . implode(' AND ', $where) . '
+                  AND owner_scope = :owner_scope
+                  AND item_name = :item_name
+                  AND input_snapshot = :input_snapshot
+                ORDER BY id DESC
+                LIMIT 1';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM calculator_recipe_library WHERE id = :id LIMIT 1');

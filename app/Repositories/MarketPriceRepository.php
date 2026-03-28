@@ -15,8 +15,9 @@ final class MarketPriceRepository
     /**
      * @return array{rows: array<int, array<string, mixed>>, total: int}
      */
-    public function paginateByUser(
-        int $userId,
+    public function paginateByViewer(
+        int $viewerUserId,
+        bool $showAll,
         string $keyword = '',
         string $priceType = '',
         int $cityId = 0,
@@ -27,8 +28,13 @@ final class MarketPriceRepository
         $perPage = max(1, min($perPage, 100));
         $offset = ($page - 1) * $perPage;
 
-        $where = ['mp.user_id = :user_id'];
-        $params = ['user_id' => $userId];
+        $where = ['1 = 1'];
+        $params = [];
+
+        if (! $showAll) {
+            $where[] = 'mp.user_id = :viewer_user_id';
+            $params['viewer_user_id'] = $viewerUserId;
+        }
 
         if ($keyword !== '') {
             $where[] = '(i.name LIKE :q OR i.item_code LIKE :q)';
@@ -45,7 +51,11 @@ final class MarketPriceRepository
 
         $whereSql = implode(' AND ', $where);
 
-        $countSql = "SELECT COUNT(*) FROM market_prices mp JOIN items i ON i.id = mp.item_id WHERE {$whereSql}";
+        $countSql = "SELECT COUNT(*)
+            FROM market_prices mp
+            JOIN items i ON i.id = mp.item_id
+            JOIN users u ON u.id = mp.user_id
+            WHERE {$whereSql}";
         $countStmt = $this->db->prepare($countSql);
         foreach ($params as $k => $v) {
             if (is_int($v)) {
@@ -59,6 +69,9 @@ final class MarketPriceRepository
 
         $sql = "SELECT
                     mp.id,
+                    mp.user_id,
+                    u.username,
+                    u.email,
                     mp.item_id,
                     i.item_code,
                     i.name AS item_name,
@@ -71,6 +84,7 @@ final class MarketPriceRepository
                     mp.updated_at
                 FROM market_prices mp
                 JOIN items i ON i.id = mp.item_id
+                JOIN users u ON u.id = mp.user_id
                 LEFT JOIN cities c ON c.id = mp.city_id
                 WHERE {$whereSql}
                 ORDER BY mp.updated_at DESC, mp.id DESC

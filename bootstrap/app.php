@@ -57,6 +57,16 @@ $router->post('/api/calculate', [App\Controllers\CalculatorController::class, 'c
 ]);
 $router->get('/api/calculator/recipes/items', [App\Controllers\CalculatorController::class, 'recipeItems']);
 $router->get('/api/calculator/recipes/detail', [App\Controllers\CalculatorController::class, 'recipeDetail']);
+$router->get('/api/calculator/items/search', [App\Controllers\CalculatorController::class, 'itemSearch']);
+$router->get('/api/calculator/csrf-token', [App\Controllers\CalculatorController::class, 'csrfToken'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+]);
+$router->post('/api/calculator/helper/persist', [App\Controllers\CalculatorController::class, 'persistSelectionHelper'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\SubscriptionMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
 $router->post('/api/calculator/craft-fee/save', [App\Controllers\CalculatorController::class, 'saveCraftFee'], [
     App\Middleware\AuthMiddleware::class,
     App\Middleware\SubscriptionMiddleware::class,

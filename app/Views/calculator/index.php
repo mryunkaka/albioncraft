@@ -38,11 +38,16 @@
     .materials-header,
     .calc-material-row {
       display: grid;
-      grid-template-columns: minmax(220px, 2fr) minmax(90px, .7fr) minmax(110px, .9fr) minmax(120px, .9fr) minmax(160px, 1fr) 120px;
-      gap: .5rem;
-      min-width: 920px;
+      grid-template-columns: minmax(240px, 2.2fr) minmax(120px, .9fr) minmax(140px, .9fr) minmax(120px, .9fr) minmax(170px, 1fr) minmax(180px, 1.1fr) minmax(140px, .9fr);
+      gap: .75rem;
+      min-width: 1180px;
       align-items: center;
       padding: .625rem;
+    }
+
+    .materials-header > div,
+    .calc-material-row > * {
+      min-width: 0;
     }
 
     .materials-header {
@@ -72,6 +77,13 @@
     .material-remove {
       white-space: nowrap;
       width: 100%;
+    }
+
+    .calc-material-row .input,
+    .calc-material-row .select,
+    .calc-material-row .button {
+      width: 100%;
+      min-width: 0;
     }
 
     .field-label-wrap {
@@ -304,6 +316,130 @@
       padding-inline: .7rem;
     }
 
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: .75rem;
+    }
+
+    .card-title-row .card-title {
+      margin-bottom: 0;
+    }
+
+    .selection-helper-note {
+      font-size: .875rem;
+      line-height: 1.5;
+      color: #475569;
+      max-width: 64rem;
+    }
+
+    .selection-helper-meta {
+      display: grid;
+      gap: .75rem;
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+      margin-bottom: 1rem;
+    }
+
+    @media (min-width: 768px) {
+      .selection-helper-meta {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    .selection-helper-name-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      min-height: 2.75rem;
+    }
+
+    .selection-helper-name-text {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+
+    .selection-helper-name-action-slot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 150px;
+      min-height: 2.75rem;
+      flex-shrink: 0;
+    }
+
+    .selection-helper-table td {
+      vertical-align: top;
+    }
+
+    .selection-helper-table .input,
+    .selection-helper-table .select {
+      min-width: 110px;
+    }
+
+    .selection-helper-table .helper-city-input {
+      min-width: 120px;
+      text-transform: uppercase;
+    }
+
+    .selection-helper-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dbeafe;
+    }
+
+    .selection-helper-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+
+    .selection-helper-summary {
+      margin-top: .75rem;
+      margin-bottom: 0;
+      white-space: pre-line;
+    }
+
+    .selection-helper-meta .field {
+      min-width: 0;
+    }
+
+    .selection-helper-remove-material {
+      font-size: .75rem;
+      line-height: 1rem;
+      padding: .35rem .55rem;
+    }
+
+    .selection-helper-remove-material-spacer {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .manual-attention-wrap .field-label {
+      color: #b91c1c;
+    }
+
+    .manual-attention-field {
+      border-color: #fca5a5 !important;
+      background: #fff5f5 !important;
+      box-shadow: 0 0 0 3px rgba(254, 226, 226, .82) !important;
+    }
+
+    .manual-attention-field:hover,
+    .manual-attention-field:focus {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 3px rgba(254, 202, 202, .92) !important;
+    }
+
     @media (max-width: 640px) {
       .tooltip-popover {
         left: .75rem !important;
@@ -475,8 +611,37 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
   </article>
 </section>
 
-<section class="card animate-fade-in-up">
-  <h2 class="card-title">Input Parameters</h2>
+<section class="card animate-fade-in-up" id="selection-helper-card" hidden>
+  <div class="card-title-row">
+    <div>
+      <h2 class="card-title">Bantu Seleksi Item</h2>
+      <p class="selection-helper-note">Isi nama item, nama material, lalu bandingkan data per kota. Tombol push akan memilih craft fee termurah, bonus tertinggi, harga item tertinggi, dan harga material termurah untuk tiap material.</p>
+    </div>
+    <button class="button button-ghost" type="button" id="close-selection-helper-btn">Kembali ke Input</button>
+  </div>
+  <div id="selection-helper-names" class="selection-helper-meta"></div>
+  <div class="table-wrap">
+    <table class="table selection-helper-table">
+      <thead id="selection-helper-head"></thead>
+      <tbody id="selection-helper-body"></tbody>
+    </table>
+  </div>
+  <div id="selection-helper-summary" class="alert selection-helper-summary" hidden></div>
+  <div class="actions selection-helper-actions">
+    <div class="selection-helper-inline-actions">
+      <button class="button button-secondary" type="button" id="helper-add-city-btn">Tambah Kota</button>
+      <button class="button button-ghost" type="button" id="helper-add-material-btn">Tambah Material</button>
+      <button class="button button-ghost" type="button" id="helper-clear-btn">Clear</button>
+    </div>
+    <button class="button button-primary" type="button" id="helper-push-btn">Push Input Parameters</button>
+  </div>
+</section>
+
+<section class="card animate-fade-in-up" id="input-parameters-card">
+  <div class="card-title-row">
+    <h2 class="card-title">Input Parameters</h2>
+    <button class="button button-secondary" type="button" id="open-selection-helper-btn">Bantu Seleksi Item</button>
+  </div>
 
   <form id="calc-form" class="form">
     <input type="hidden" name="item_id" value="">
@@ -620,6 +785,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
       <div class="materials-scroll">
         <div class="materials-header">
           <div>Nama Item</div>
+          <div>Item Value</div>
           <div>Qty</div>
           <div>Harga</div>
           <div>RR</div>
@@ -812,5 +978,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 <script id="calculator-tooltip-map" type="application/json">
   <?= json_encode($calculatorTooltips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 </script>
-<script src="/assets/calculator.js?v=20260327-05"></script>
+<script src="/assets/calculator.js?v=20260329-05"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

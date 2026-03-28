@@ -1,4 +1,5 @@
 (function () {
+  const TABLE_COLS = 11;
   const tableBody = document.getElementById("price-table-body");
   const qInput = document.getElementById("filter-q");
   const priceTypeSelect = document.getElementById("filter-price-type");
@@ -8,13 +9,6 @@
   const nextBtn = document.getElementById("page-next");
   const pageInfo = document.getElementById("page-info");
   const form = document.getElementById("price-form");
-  const bulkForm = document.getElementById("bulk-price-form");
-  const bulkRowsInput = document.getElementById("bulk-rows");
-  const bulkSaveBtn = document.getElementById("bulk-save-btn");
-  const bulkFillSampleBtn = document.getElementById("bulk-fill-sample");
-  const bulkClearBtn = document.getElementById("bulk-clear");
-  const bulkResult = document.getElementById("bulk-result");
-  const bulkErrors = document.getElementById("bulk-errors");
   const saveBtn = document.getElementById("price-save-btn");
   const cancelEditBtn = document.getElementById("price-cancel-edit");
   const idInput = document.getElementById("price-id");
@@ -58,7 +52,7 @@
   function renderRows(rows) {
     if (!tableBody) return;
     if (!Array.isArray(rows) || rows.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"10\">Tidak ada data.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Tidak ada data.</td></tr>`;
       return;
     }
 
@@ -66,6 +60,7 @@
       .map((row) => `
         <tr data-row='${escapeHtml(JSON.stringify(row))}'>
           <td>${escapeHtml(row.id)}</td>
+          <td>${escapeHtml(row.owner_label || "-")}</td>
           <td>${escapeHtml(row.item_name)}</td>
           <td>${escapeHtml(row.item_code)}</td>
           <td>${escapeHtml(row.city_name || "-")}</td>
@@ -75,10 +70,12 @@
           <td>${escapeHtml(row.updated_at || "-")}</td>
           <td>${escapeHtml(row.notes || "-")}</td>
           <td>
-            <div class="flex gap-2">
-              <button class="button button-ghost js-edit" type="button">Edit</button>
-              <button class="button button-danger js-delete" type="button">Delete</button>
-            </div>
+            ${row.can_manage
+              ? `<div class="flex gap-2">
+                  <button class="button button-ghost js-edit" type="button">Edit</button>
+                  <button class="button button-danger js-delete" type="button">Delete</button>
+                </div>`
+              : `<span class="text-sm text-slate-500">View only</span>`}
           </td>
         </tr>
       `)
@@ -155,35 +152,12 @@
     if (cancelEditBtn) cancelEditBtn.hidden = true;
   }
 
-  function setBulkFeedback(message, errorItems, isError) {
-    if (bulkResult) {
-      if (message) {
-        bulkResult.hidden = false;
-        bulkResult.textContent = message;
-      } else {
-        bulkResult.hidden = true;
-        bulkResult.textContent = "";
-      }
-    }
-
-    if (bulkErrors) {
-      const rows = Array.isArray(errorItems) ? errorItems.filter(Boolean) : [];
-      if (rows.length > 0) {
-        bulkErrors.hidden = false;
-        bulkErrors.innerHTML = rows.slice(0, 10).map((row) => escapeHtml(row)).join("<br>");
-      } else if (isError) {
-        bulkErrors.hidden = false;
-        bulkErrors.textContent = "Bulk gagal diproses.";
-      } else {
-        bulkErrors.hidden = true;
-        bulkErrors.textContent = "";
-        bulkErrors.innerHTML = "";
-      }
-    }
-  }
-
   async function deleteRow(row) {
     if (!row || !row.id) return;
+    if (!row.can_manage) {
+      alert("Data user lain hanya bisa dilihat.");
+      return;
+    }
     const ok = window.confirm(`Hapus data harga ID ${row.id}?`);
     if (!ok) return;
 
@@ -215,7 +189,7 @@
 
   async function loadRows() {
     if (!tableBody) return;
-    tableBody.innerHTML = "<tr><td colspan=\"9\">Loading...</td></tr>";
+    tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Loading...</td></tr>`;
     const params = buildQuery();
 
     let res;
@@ -224,13 +198,13 @@
         headers: { "X-Requested-With": "XMLHttpRequest" },
       });
     } catch (_) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\">Gagal request ke server.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Gagal request ke server.</td></tr>`;
       return;
     }
 
     const json = await res.json().catch(() => null);
     if (!json || json.success !== true || !json.data) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\">Gagal load data.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Gagal load data.</td></tr>`;
       return;
     }
 
@@ -317,73 +291,6 @@
     cancelEditBtn.addEventListener("click", () => {
       if (form) form.reset();
       resetEditState();
-    });
-  }
-
-  if (bulkForm) {
-    bulkForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!bulkSaveBtn) return;
-
-      bulkSaveBtn.disabled = true;
-      const oldText = bulkSaveBtn.textContent;
-      bulkSaveBtn.textContent = "Memproses...";
-      setBulkFeedback("", [], false);
-
-      const fd = new FormData(bulkForm);
-      let res;
-      try {
-        res = await fetch("/price-data/bulk-save", {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-          body: fd,
-        });
-      } catch (_) {
-        setBulkFeedback("Gagal request bulk ke server.", [], true);
-        bulkSaveBtn.disabled = false;
-        bulkSaveBtn.textContent = oldText;
-        return;
-      }
-
-      const json = await res.json().catch(() => null);
-      const errors = json && json.data && Array.isArray(json.data.errors) ? json.data.errors : [];
-      if (!json || json.success !== true) {
-        setBulkFeedback((json && json.message) || "Bulk gagal.", errors, true);
-      } else {
-        const data = json.data || {};
-        setBulkFeedback(
-          `${json.message || "Bulk selesai."} Total sukses: ${(data.created_count || 0) + (data.updated_count || 0)}.`,
-          errors,
-          false
-        );
-        if ((data.error_count || 0) === 0) {
-          bulkForm.reset();
-        }
-        loadRows();
-      }
-
-      bulkSaveBtn.disabled = false;
-      bulkSaveBtn.textContent = oldText;
-    });
-  }
-
-  if (bulkFillSampleBtn) {
-    bulkFillSampleBtn.addEventListener("click", () => {
-      if (!bulkRowsInput) return;
-      bulkRowsInput.value = [
-        "item_code,city_code,price_type,price_value,observed_at,notes",
-        "TEASEL,,BUY,444,,global price",
-        "GOOSE_EGG,BRECILIEN,BUY,555,2026-03-27 11:10:00,city buy",
-        "T4_POTION_SAMPLE,BRECILIEN,SELL,1888,2026-03-27 11:05:00,city sell"
-      ].join("\n");
-      setBulkFeedback("", [], false);
-    });
-  }
-
-  if (bulkClearBtn) {
-    bulkClearBtn.addEventListener("click", () => {
-      if (bulkRowsInput) bulkRowsInput.value = "";
-      setBulkFeedback("", [], false);
     });
   }
 

@@ -1,4 +1,5 @@
 (function () {
+  const TABLE_COLS = 11;
   const tableBody = document.getElementById("price-table-body");
   const qInput = document.getElementById("filter-q");
   const priceTypeSelect = document.getElementById("filter-price-type");
@@ -51,7 +52,7 @@
   function renderRows(rows) {
     if (!tableBody) return;
     if (!Array.isArray(rows) || rows.length === 0) {
-      tableBody.innerHTML = "<tr><td colspan=\"10\">Tidak ada data.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Tidak ada data.</td></tr>`;
       return;
     }
 
@@ -59,6 +60,7 @@
       .map((row) => `
         <tr data-row='${escapeHtml(JSON.stringify(row))}'>
           <td>${escapeHtml(row.id)}</td>
+          <td>${escapeHtml(row.owner_label || "-")}</td>
           <td>${escapeHtml(row.item_name)}</td>
           <td>${escapeHtml(row.item_code)}</td>
           <td>${escapeHtml(row.city_name || "-")}</td>
@@ -68,10 +70,12 @@
           <td>${escapeHtml(row.updated_at || "-")}</td>
           <td>${escapeHtml(row.notes || "-")}</td>
           <td>
-            <div class="flex gap-2">
-              <button class="button button-ghost js-edit" type="button">Edit</button>
-              <button class="button button-danger js-delete" type="button">Delete</button>
-            </div>
+            ${row.can_manage
+              ? `<div class="flex gap-2">
+                  <button class="button button-ghost js-edit" type="button">Edit</button>
+                  <button class="button button-danger js-delete" type="button">Delete</button>
+                </div>`
+              : `<span class="text-sm text-slate-500">View only</span>`}
           </td>
         </tr>
       `)
@@ -150,6 +154,10 @@
 
   async function deleteRow(row) {
     if (!row || !row.id) return;
+    if (!row.can_manage) {
+      alert("Data user lain hanya bisa dilihat.");
+      return;
+    }
     const ok = window.confirm(`Hapus data harga ID ${row.id}?`);
     if (!ok) return;
 
@@ -181,7 +189,7 @@
 
   async function loadRows() {
     if (!tableBody) return;
-    tableBody.innerHTML = "<tr><td colspan=\"9\">Loading...</td></tr>";
+    tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Loading...</td></tr>`;
     const params = buildQuery();
 
     let res;
@@ -190,13 +198,13 @@
         headers: { "X-Requested-With": "XMLHttpRequest" },
       });
     } catch (_) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\">Gagal request ke server.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Gagal request ke server.</td></tr>`;
       return;
     }
 
     const json = await res.json().catch(() => null);
     if (!json || json.success !== true || !json.data) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\">Gagal load data.</td></tr>";
+      tableBody.innerHTML = `<tr><td colspan="${TABLE_COLS}">Gagal load data.</td></tr>`;
       return;
     }
 

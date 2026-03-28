@@ -93,7 +93,8 @@ final class RecipeRepository
                 rm.sort_order,
                 mi.id AS material_item_id,
                 mi.item_code AS material_item_code,
-                mi.name AS material_name
+                mi.name AS material_name,
+                mi.item_value AS material_item_value
              FROM recipe_materials rm
              INNER JOIN items mi ON mi.id = rm.material_item_id
              WHERE rm.recipe_id = :recipe_id

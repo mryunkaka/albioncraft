@@ -61,9 +61,34 @@
   const recipeRecommendations = document.getElementById("recipe-recommendations");
   const analysisRecommendation = document.getElementById("analysis-recommendation");
   const analysisRecommendationList = document.getElementById("analysis-recommendation-list");
+  const inputParametersCard = document.getElementById("input-parameters-card");
+  const selectionHelperCard = document.getElementById("selection-helper-card");
+  const openSelectionHelperBtn = document.getElementById("open-selection-helper-btn");
+  const closeSelectionHelperBtn = document.getElementById("close-selection-helper-btn");
+  const selectionHelperNames = document.getElementById("selection-helper-names");
+  const selectionHelperHead = document.getElementById("selection-helper-head");
+  const selectionHelperBody = document.getElementById("selection-helper-body");
+  const selectionHelperSummary = document.getElementById("selection-helper-summary");
+  const helperAddCityBtn = document.getElementById("helper-add-city-btn");
+  const helperAddMaterialBtn = document.getElementById("helper-add-material-btn");
+  const helperClearBtn = document.getElementById("helper-clear-btn");
+  const helperPushBtn = document.getElementById("helper-push-btn");
   const calculatorCitiesData = document.getElementById("calculator-cities-data");
   const cityOptions = parseCityOptions();
+  const cityAliasMap = {
+    BW: ["BW", "BRIDGEWATCH", "BRIDGE WATCH"],
+    ML: ["ML", "MARTLOCK"],
+    TF: ["TF", "THETFORD"],
+    FS: ["FS", "FORT STERLING", "FORTSTERLING", "FORT_STERLING"],
+    LM: ["LM", "LYMHURST"],
+    BR: ["BR", "BRECILIEN"],
+    CA: ["CA", "CAERLEON"],
+  };
+  const manualAttentionRules = [];
+  let selectionHelperState = createDefaultSelectionHelperState();
+  let selectionHelperHasDraft = false;
   let lastRenderedAnalysisText = "";
+  let csrfRefreshPromise = null;
 
   function upper(v) {
     return String(v || "").toUpperCase();
@@ -88,8 +113,15 @@
     return node;
   }
 
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = String(value == null ? "" : value);
+    return div.innerHTML;
+  }
+
   function addMaterialRow(initial) {
     const row = el("div", "calc-material-row");
+    const allowBlankReturn = !!(initial && initial.allow_blank_return);
 
     const itemId = el("input", "material-item-id", { type: "hidden" });
     itemId.value = (initial && initial.item_id != null) ? String(initial.item_id) : "";
@@ -100,6 +132,9 @@
       name.value = upper(name.value);
     });
 
+    const itemValue = el("input", "input material-item-value", { type: "number", step: "0.01", placeholder: "Item value", min: "0" });
+    itemValue.value = (initial && initial.item_value != null) ? String(initial.item_value) : "";
+
     const qty = el("input", "input material-qty", { type: "number", step: "0.0001", placeholder: "Qty/recipe", min: "0" });
     qty.value = (initial && initial.qty_per_recipe != null) ? String(initial.qty_per_recipe) : "0";
 
@@ -107,9 +142,14 @@
     price.value = (initial && initial.buy_price != null) ? String(initial.buy_price) : "0";
 
     const rt = el("select", "select material-type");
+    if (allowBlankReturn) {
+      rt.appendChild(new Option("Pilih RR", ""));
+    }
     rt.appendChild(new Option("RETURN", "RETURN"));
     rt.appendChild(new Option("NON_RETURN", "NON_RETURN"));
-    rt.value = (initial && initial.return_type) || "RETURN";
+    rt.value = (initial && initial.return_type != null)
+      ? String(initial.return_type)
+      : (allowBlankReturn ? "" : "RETURN");
 
     const city = el("select", "select material-city");
     city.appendChild(new Option("Kota beli material", ""));
@@ -125,10 +165,12 @@
       row.remove();
       scheduleSave();
       reindexMaterialNames();
+      refreshManualAttention();
     });
 
     row.appendChild(itemId);
     row.appendChild(name);
+    row.appendChild(itemValue);
     row.appendChild(qty);
     row.appendChild(price);
     row.appendChild(rt);
@@ -138,6 +180,8 @@
 
     materialsRoot.appendChild(row);
     reindexMaterialNames();
+    refreshManualAttention();
+    return row;
   }
 
   function reindexMaterialNames() {
@@ -147,19 +191,22 @@
       const inputs = row.querySelectorAll("input, select");
       const itemId = inputs[0];
       const name = inputs[1];
-      const qty = inputs[2];
-      const price = inputs[3];
-      const rt = inputs[4];
-      const city = inputs[5];
+      const itemValue = inputs[2];
+      const qty = inputs[3];
+      const price = inputs[4];
+      const rt = inputs[5];
+      const city = inputs[6];
 
       itemId.name = `materials[${i}][item_id]`;
       name.name = `materials[${i}][name]`;
+      itemValue.name = `materials[${i}][item_value]`;
       qty.name = `materials[${i}][qty_per_recipe]`;
       price.name = `materials[${i}][buy_price]`;
       rt.name = `materials[${i}][return_type]`;
       city.name = `materials[${i}][city_id]`;
 
       name.id = `mat-${i}-name`;
+      itemValue.id = `mat-${i}-item-value`;
       qty.id = `mat-${i}-qty`;
       price.id = `mat-${i}-price`;
       rt.id = `mat-${i}-type`;
@@ -210,6 +257,7 @@
 
   function populateRecipeDetail(data) {
     if (!data || typeof data !== "object") return;
+    clearManualAttention();
 
     const item = data.item || {};
     const cityBonus = data.city_bonus || {};
@@ -252,6 +300,7 @@
         addMaterialRow({
           item_id: material.item_id != null ? material.item_id : "",
           name: material.name || "",
+          item_value: material.item_value != null ? material.item_value : "",
           qty_per_recipe: material.qty_per_recipe != null ? material.qty_per_recipe : 0,
           buy_price: material.buy_price != null ? material.buy_price : 0,
           return_type: material.return_type || "RETURN",
@@ -261,6 +310,7 @@
     }
     reindexMaterialNames();
     renderRecommendations(recommendations);
+    refreshManualAttention();
     scheduleSave();
   }
 
@@ -342,6 +392,873 @@
     errorBox.hidden = false;
     errorBox.classList.toggle("alert-error", type !== "success");
     errorBox.textContent = msg;
+  }
+
+  function normalizeLookupKey(value) {
+    return upper(String(value || "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim());
+  }
+
+  function numberOrNull(value) {
+    if (value == null) return null;
+    const raw = String(value).trim();
+    if (raw === "") return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function toInputValue(value) {
+    return value == null ? "" : String(value);
+  }
+
+  function hasNonEmptyValue(field) {
+    return !!field && String(field.value || "").trim() !== "";
+  }
+
+  function hasPositiveValue(field) {
+    if (!field) return false;
+    const raw = String(field.value || "").trim();
+    if (raw === "") return false;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0;
+  }
+
+  function clearManualAttention() {
+    manualAttentionRules.splice(0, manualAttentionRules.length);
+    if (!form) return;
+    form.querySelectorAll(".manual-attention-field").forEach((field) => {
+      field.classList.remove("manual-attention-field");
+    });
+    form.querySelectorAll(".manual-attention-wrap").forEach((field) => {
+      field.classList.remove("manual-attention-wrap");
+    });
+  }
+
+  function registerManualAttention(field, validator) {
+    if (!(field instanceof HTMLElement) || typeof validator !== "function") return;
+    manualAttentionRules.push({ field, validator });
+  }
+
+  function refreshManualAttention() {
+    for (let i = manualAttentionRules.length - 1; i >= 0; i--) {
+      const rule = manualAttentionRules[i];
+      const field = rule && rule.field;
+      if (!(field instanceof HTMLElement) || !field.isConnected) {
+        manualAttentionRules.splice(i, 1);
+        continue;
+      }
+
+      const isFilled = !!rule.validator(field);
+      field.classList.toggle("manual-attention-field", !isFilled);
+      const wrap = field.closest(".field");
+      if (wrap) {
+        wrap.classList.toggle("manual-attention-wrap", !isFilled);
+      }
+    }
+  }
+
+  function createSelectionHelperRow(city, craftFee, bonus, itemPrice, materials) {
+    return {
+      city: city == null ? "" : String(city),
+      craftFee: craftFee == null ? "" : String(craftFee),
+      bonus: bonus == null ? "" : String(bonus),
+      itemPrice: itemPrice == null ? "" : String(itemPrice),
+      materials: Array.isArray(materials) ? materials.map((value) => value == null ? "" : String(value)) : [],
+    };
+  }
+
+  function createDefaultSelectionHelperState() {
+    return {
+      itemName: "",
+      itemValue: "",
+      materials: [
+        { name: "" },
+        { name: "" },
+      ],
+      rows: [
+        createSelectionHelperRow("BW", 595, 25, 2295, [256, 230]),
+        createSelectionHelperRow("ML", 750, 10, 2700, [228, 230]),
+        createSelectionHelperRow("TF", 500, 10, 1500, [219, 228]),
+        createSelectionHelperRow("FS", 560, 10, 2990, [234, 228]),
+        createSelectionHelperRow("LM", 440, 10, 4400, [275, 247]),
+      ],
+    };
+  }
+
+  function resetSelectionHelperState(markAsDraft = true) {
+    selectionHelperState = createDefaultSelectionHelperState();
+    selectionHelperHasDraft = markAsDraft;
+    renderSelectionHelper();
+  }
+
+  function ensureSelectionHelperState() {
+    if (!selectionHelperState || typeof selectionHelperState !== "object") {
+      selectionHelperState = createDefaultSelectionHelperState();
+    }
+
+    if (!Array.isArray(selectionHelperState.materials) || selectionHelperState.materials.length === 0) {
+      selectionHelperState.materials = [{ name: "" }];
+    }
+
+    selectionHelperState.materials = selectionHelperState.materials.map((material) => ({
+      name: upper((material && material.name) || ""),
+    }));
+
+    if (!Array.isArray(selectionHelperState.rows) || selectionHelperState.rows.length === 0) {
+      selectionHelperState.rows = [createSelectionHelperRow("", "", "", "", new Array(selectionHelperState.materials.length).fill(""))];
+    }
+
+    selectionHelperState.rows = selectionHelperState.rows.map((row) => {
+      const materials = Array.isArray(row && row.materials) ? row.materials.slice(0, selectionHelperState.materials.length) : [];
+      while (materials.length < selectionHelperState.materials.length) {
+        materials.push("");
+      }
+      return createSelectionHelperRow(
+        row && row.city,
+        row && row.craftFee,
+        row && row.bonus,
+        row && row.itemPrice,
+        materials
+      );
+    });
+
+    selectionHelperState.itemName = upper(selectionHelperState.itemName || "");
+    selectionHelperState.itemValue = selectionHelperState.itemValue == null ? "" : String(selectionHelperState.itemValue);
+  }
+
+  function cityLookupKeysForValue(value) {
+    const base = normalizeLookupKey(value);
+    const keys = new Set();
+    if (base) {
+      keys.add(base);
+    }
+
+    for (const aliases of Object.values(cityAliasMap)) {
+      const normalizedAliases = aliases.map((alias) => normalizeLookupKey(alias)).filter(Boolean);
+      if (base && normalizedAliases.includes(base)) {
+        for (const alias of normalizedAliases) {
+          keys.add(alias);
+        }
+      }
+    }
+
+    return keys;
+  }
+
+  function findCityOptionByReference(reference) {
+    const targetKeys = cityLookupKeysForValue(reference);
+    if (targetKeys.size === 0) return null;
+
+    for (const option of cityOptions) {
+      const optionKeys = new Set([
+        ...cityLookupKeysForValue(option.code || ""),
+        ...cityLookupKeysForValue(option.name || ""),
+      ]);
+      for (const key of targetKeys) {
+        if (optionKeys.has(key)) {
+          return option;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function getHelperCityLabel(candidate) {
+    if (!candidate) return "-";
+    if (candidate.cityOption && candidate.cityOption.name) return String(candidate.cityOption.name);
+    const cityRef = String(candidate.cityRef || "").trim();
+    return cityRef !== "" ? cityRef : "-";
+  }
+
+  function getSelectionHelperMaterialLabel(index) {
+    const material = selectionHelperState.materials[index] || null;
+    const name = material ? String(material.name || "").trim() : "";
+    return name !== "" ? name : `Material ${index + 1}`;
+  }
+
+  function buildSelectionHelperPicks() {
+    ensureSelectionHelperState();
+
+    function pickRowValue(kind, getValue, prefer) {
+      let best = null;
+
+      selectionHelperState.rows.forEach((row, rowIndex) => {
+        const numericValue = numberOrNull(getValue(row));
+        if (numericValue == null) return;
+
+        const candidate = {
+          kind,
+          rowIndex,
+          cityRef: String(row.city || "").trim(),
+          cityOption: findCityOptionByReference(row.city),
+          value: numericValue,
+        };
+
+        if (!best || prefer(candidate.value, best.value)) {
+          best = candidate;
+        }
+      });
+
+      return best;
+    }
+
+    return {
+      craft: pickRowValue("craft", (row) => row.craftFee, (a, b) => a < b),
+      bonus: pickRowValue("bonus", (row) => row.bonus, (a, b) => a > b),
+      sell: pickRowValue("sell", (row) => row.itemPrice, (a, b) => a > b),
+      materials: selectionHelperState.materials.map((_, materialIndex) => pickRowValue(
+        "material",
+        (row) => Array.isArray(row.materials) ? row.materials[materialIndex] : "",
+        (a, b) => a < b
+      )),
+      };
+    }
+
+  function buildSelectionHelperSaveRows(activeMaterialEntries) {
+    ensureSelectionHelperState();
+
+    const rows = [];
+    const warnings = [];
+
+    selectionHelperState.rows.forEach((row, rowIndex) => {
+      const craftFee = numberOrNull(row.craftFee);
+      const bonus = numberOrNull(row.bonus);
+      const sellPrice = numberOrNull(row.itemPrice);
+      const materials = activeMaterialEntries.map((material) => ({
+        buyPrice: numberOrNull(Array.isArray(row.materials) ? row.materials[material.index] : ""),
+      }));
+      const hasAnyPrice = craftFee != null
+        || bonus != null
+        || sellPrice != null
+        || materials.some((material) => material.buyPrice != null);
+
+      if (!hasAnyPrice) {
+        return;
+      }
+
+      const cityRef = String(row.city || "").trim();
+      const cityOption = findCityOptionByReference(row.city);
+      if (!cityOption) {
+        warnings.push(`Baris kota ${rowIndex + 1}${cityRef ? ` [${cityRef}]` : ""} dilewati karena kota tidak dikenali.`);
+        return;
+      }
+
+      rows.push({
+        cityRef,
+        cityOption,
+        craftFee,
+        bonus,
+        sellPrice,
+        materials,
+      });
+    });
+
+    return { rows, warnings };
+  }
+
+    function renderSelectionHelperSummary() {
+      if (!selectionHelperSummary) return;
+
+    const picks = buildSelectionHelperPicks();
+    const lines = [];
+
+    if (picks.craft) {
+      lines.push(`Craft termurah: ${getHelperCityLabel(picks.craft)} @ ${fmtMoney(Number(picks.craft.value || 0))}`);
+    }
+    if (picks.bonus) {
+      lines.push(`Bonus tertinggi: ${getHelperCityLabel(picks.bonus)} @ ${Number(picks.bonus.value || 0).toFixed(0)}%`);
+    }
+    if (picks.sell) {
+      lines.push(`Harga item tertinggi: ${getHelperCityLabel(picks.sell)} @ ${fmtMoney(Number(picks.sell.value || 0))}`);
+    }
+
+    picks.materials.forEach((pick, index) => {
+      if (!pick) return;
+      lines.push(`${getSelectionHelperMaterialLabel(index)} termurah: ${getHelperCityLabel(pick)} @ ${fmtMoney(Number(pick.value || 0))}`);
+    });
+
+    if (lines.length === 0) {
+      selectionHelperSummary.hidden = true;
+      selectionHelperSummary.textContent = "";
+      return;
+    }
+
+    selectionHelperSummary.hidden = false;
+    selectionHelperSummary.textContent = lines.join("\n");
+  }
+
+  function renderSelectionHelperNames() {
+    if (!selectionHelperNames) return;
+    selectionHelperNames.innerHTML = "";
+
+    const itemField = document.createElement("label");
+    itemField.className = "field";
+    itemField.innerHTML = `
+      <span class="field-label selection-helper-name-label">
+        <span class="selection-helper-name-text">Nama Item Craft</span>
+        <span class="selection-helper-name-action-slot">
+          <span class="button button-ghost selection-helper-remove-material selection-helper-remove-material-spacer" aria-hidden="true">Hapus Material</span>
+        </span>
+      </span>
+      <input class="input" type="text" data-helper-name="item" placeholder="Isi nama item">
+    `;
+    const itemInput = itemField.querySelector("input");
+    if (itemInput) {
+      itemInput.value = String(selectionHelperState.itemName || "");
+    }
+    selectionHelperNames.appendChild(itemField);
+
+    const itemValueField = document.createElement("label");
+    itemValueField.className = "field";
+    itemValueField.innerHTML = `
+      <span class="field-label selection-helper-name-label">
+        <span class="selection-helper-name-text">Item Value</span>
+        <span class="selection-helper-name-action-slot">
+          <span class="button button-ghost selection-helper-remove-material selection-helper-remove-material-spacer" aria-hidden="true">Hapus Material</span>
+        </span>
+      </span>
+      <input class="input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Isi item value">
+    `;
+    const itemValueInput = itemValueField.querySelector("input");
+    if (itemValueInput) {
+      itemValueInput.value = String(selectionHelperState.itemValue || "");
+    }
+    selectionHelperNames.appendChild(itemValueField);
+
+    selectionHelperState.materials.forEach((material, index) => {
+      const field = document.createElement("div");
+      field.className = "field";
+      field.innerHTML = `
+        <span class="field-label selection-helper-name-label">
+          <span class="selection-helper-name-text">Nama Material ${index + 1}</span>
+          <span class="selection-helper-name-action-slot">
+            <button class="button button-ghost selection-helper-remove-material" type="button" data-helper-remove-material="${index}">Hapus Material</button>
+          </span>
+        </span>
+        <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Isi nama material ${index + 1}">
+      `;
+      const input = field.querySelector("input");
+      if (input) {
+        input.value = String((material && material.name) || "");
+      }
+      selectionHelperNames.appendChild(field);
+    });
+  }
+
+  function renderSelectionHelperTable() {
+    if (!selectionHelperHead || !selectionHelperBody) return;
+
+    const headerCells = [
+      "<tr>",
+      "<th>Kota</th>",
+      "<th class=\"right\">Craft Fee</th>",
+      "<th class=\"right\">Bonus</th>",
+      "<th class=\"right\">Harga Item Craft</th>",
+    ];
+
+    selectionHelperState.materials.forEach((_, index) => {
+      headerCells.push(`<th class="right">${getSelectionHelperMaterialLabel(index)}</th>`);
+    });
+
+    headerCells.push("<th>Action</th>");
+    headerCells.push("</tr>");
+    selectionHelperHead.innerHTML = headerCells.join("");
+
+    selectionHelperBody.innerHTML = selectionHelperState.rows.map((row, rowIndex) => {
+      const materialCells = selectionHelperState.materials.map((_, materialIndex) => `
+        <td>
+          <input
+            class="input"
+            type="number"
+            step="0.01"
+            min="0"
+            value="${escapeHtml(toInputValue(Array.isArray(row.materials) ? row.materials[materialIndex] : ""))}"
+            data-helper-row-index="${rowIndex}"
+            data-helper-field="material"
+            data-helper-material-index="${materialIndex}"
+          >
+        </td>
+      `).join("");
+
+      return `
+        <tr>
+          <td>
+            <input
+              class="input helper-city-input"
+              type="text"
+              value="${escapeHtml(toInputValue(row.city))}"
+              data-helper-row-index="${rowIndex}"
+              data-helper-field="city"
+              placeholder="BW / Martlock"
+            >
+          </td>
+          <td>
+            <input
+              class="input"
+              type="number"
+              step="0.01"
+              min="0"
+              value="${escapeHtml(toInputValue(row.craftFee))}"
+              data-helper-row-index="${rowIndex}"
+              data-helper-field="craftFee"
+            >
+          </td>
+          <td>
+            <input
+              class="input"
+              type="number"
+              step="0.01"
+              min="0"
+              value="${escapeHtml(toInputValue(row.bonus))}"
+              data-helper-row-index="${rowIndex}"
+              data-helper-field="bonus"
+            >
+          </td>
+          <td>
+            <input
+              class="input"
+              type="number"
+              step="0.01"
+              min="0"
+              value="${escapeHtml(toInputValue(row.itemPrice))}"
+              data-helper-row-index="${rowIndex}"
+              data-helper-field="itemPrice"
+            >
+          </td>
+          ${materialCells}
+          <td>
+            <button class="button button-ghost" type="button" data-helper-remove-row="${rowIndex}">Hapus</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderSelectionHelper() {
+    if (!selectionHelperCard) return;
+    ensureSelectionHelperState();
+    renderSelectionHelperNames();
+    renderSelectionHelperTable();
+    renderSelectionHelperSummary();
+  }
+
+  function removeSelectionHelperMaterial(index) {
+    ensureSelectionHelperState();
+    if (index < 0 || index >= selectionHelperState.materials.length) return;
+
+    if (selectionHelperState.materials.length <= 1) {
+      selectionHelperState.materials = [{ name: "" }];
+      selectionHelperState.rows.forEach((row) => {
+        row.materials = [""];
+      });
+      renderSelectionHelper();
+      return;
+    }
+
+    selectionHelperState.materials.splice(index, 1);
+    selectionHelperState.rows.forEach((row) => {
+      if (!Array.isArray(row.materials)) {
+        row.materials = [];
+      }
+      row.materials.splice(index, 1);
+    });
+    renderSelectionHelper();
+  }
+
+  function syncSelectionHelperFromCurrentForm() {
+    ensureSelectionHelperState();
+
+    const currentItemName = upper((form.querySelector('[name="item_name"]') || {}).value || "");
+    if (currentItemName) {
+      selectionHelperState.itemName = currentItemName;
+    }
+    const currentItemValue = String((form.querySelector('[name="item_value"]') || {}).value || "").trim();
+    if (currentItemValue !== "") {
+      selectionHelperState.itemValue = currentItemValue;
+    }
+
+    const materialRows = Array.from(materialsRoot ? materialsRoot.querySelectorAll(".calc-material-row") : []);
+    const materialNames = materialRows.map((row) => {
+      const field = row.querySelector(".material-name");
+      return upper((field && field.value) || "");
+    });
+    const defaultExampleNames = ["HIDE T3", "LEATHER T2"];
+    const isDefaultExample = !currentItemName
+      && materialNames.length === defaultExampleNames.length
+      && materialNames.every((name, index) => name === defaultExampleNames[index]);
+
+    if (materialRows.length > 0 && materialNames.some(Boolean) && !isDefaultExample) {
+      selectionHelperState.materials = materialRows.map((row) => {
+        const field = row.querySelector(".material-name");
+        return { name: upper((field && field.value) || "") };
+      });
+      ensureSelectionHelperState();
+    }
+  }
+
+  function toggleSelectionHelper(show) {
+    if (!selectionHelperCard || !inputParametersCard) return;
+
+    if (show) {
+      if (!selectionHelperHasDraft) {
+        syncSelectionHelperFromCurrentForm();
+      }
+      renderSelectionHelper();
+      inputParametersCard.hidden = true;
+      selectionHelperCard.hidden = false;
+      selectionHelperCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    selectionHelperCard.hidden = true;
+    inputParametersCard.hidden = false;
+    inputParametersCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function responsePath(url) {
+    if (!url) return "";
+
+    try {
+      return new URL(url, window.location.origin).pathname || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function summarizeAjaxResponse(text) {
+    const cleanText = String(text || "")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (cleanText.length <= 220) {
+      return cleanText;
+    }
+
+    return `${cleanText.slice(0, 217)}...`;
+  }
+
+  function buildAjaxErrorMessage(res, responseText, fallbackMessage) {
+    const defaultMessage = fallbackMessage || "Request gagal.";
+    const finalPath = responsePath(res && res.url ? res.url : "");
+    const summary = summarizeAjaxResponse(responseText);
+
+    if (res && res.redirected && finalPath === "/login") {
+      return "Session login berakhir atau request ditolak middleware login. Silakan login ulang lalu coba lagi.";
+    }
+
+    if (res && res.redirected) {
+      return `Request dialihkan ke ${finalPath || res.url}. Kemungkinan session habis atau middleware menolak request.`;
+    }
+
+    if (res && res.status === 401) {
+      return summary || "Session login tidak valid. Silakan login ulang lalu coba lagi.";
+    }
+
+    if (res && res.status === 403) {
+      return summary || "Akses ditolak untuk request ini.";
+    }
+
+    if (res && res.status === 419) {
+      return summary || "CSRF token tidak valid. Reload halaman lalu coba lagi.";
+    }
+
+    if (summary) {
+      return `${defaultMessage} HTTP ${res.status}. ${summary}`;
+    }
+
+    if (res) {
+      return `${defaultMessage} HTTP ${res.status}.`;
+    }
+
+    return defaultMessage;
+  }
+
+  function updateCsrfFields(token) {
+    const nextToken = String(token || "").trim();
+    if (!nextToken) return;
+
+    document.querySelectorAll('input[name="_token"]').forEach((field) => {
+      if (field instanceof HTMLInputElement) {
+        field.value = nextToken;
+      }
+    });
+  }
+
+  async function refreshCsrfToken() {
+    if (csrfRefreshPromise) {
+      return csrfRefreshPromise;
+    }
+
+    csrfRefreshPromise = (async () => {
+      let res;
+      try {
+        res = await fetch("/api/calculator/csrf-token", {
+          method: "GET",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Cache-Control": "no-cache",
+          },
+        });
+      } catch (err) {
+        const detail = err instanceof Error && err.message ? ` ${err.message}` : "";
+        throw new Error(`Gagal mengambil CSRF token baru.${detail}`);
+      }
+
+      const responseText = await res.text();
+      let json = null;
+      if (responseText !== "") {
+        try {
+          json = JSON.parse(responseText);
+        } catch (_) {
+          json = null;
+        }
+      }
+
+      if (!json || json.success !== true) {
+        const backendMessage = json && typeof json.message === "string" ? json.message.trim() : "";
+        throw new Error(backendMessage || buildAjaxErrorMessage(res, responseText, "Gagal mengambil CSRF token baru."));
+      }
+
+      const token = String((((json || {}).data || {}).csrf_token) || "").trim();
+      if (!token) {
+        throw new Error("Server tidak mengembalikan CSRF token baru.");
+      }
+
+      updateCsrfFields(token);
+      return token;
+    })();
+
+    try {
+      return await csrfRefreshPromise;
+    } finally {
+      csrfRefreshPromise = null;
+    }
+  }
+
+  async function postAjaxForm(url, formData, fallbackMessage, allowCsrfRetry = true) {
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        body: formData,
+      });
+    } catch (err) {
+      const detail = err instanceof Error && err.message ? ` ${err.message}` : "";
+      throw new Error(`Tidak bisa terhubung ke server.${detail}`);
+    }
+
+    const responseText = await res.text();
+    let json = null;
+    if (responseText !== "") {
+      try {
+        json = JSON.parse(responseText);
+      } catch (_) {
+        json = null;
+      }
+    }
+
+    if (!json || json.success !== true) {
+      const errorCode = json && typeof json.error_code === "string" ? json.error_code.trim() : "";
+      if (allowCsrfRetry && (res.status === 419 || errorCode === "CSRF_INVALID")) {
+        const nextToken = await refreshCsrfToken();
+        formData.delete("_token");
+        formData.append("_token", nextToken);
+        return postAjaxForm(url, formData, fallbackMessage, false);
+      }
+
+      const backendMessage = json && typeof json.message === "string" ? json.message.trim() : "";
+      throw new Error(backendMessage || buildAjaxErrorMessage(res, responseText, fallbackMessage));
+    }
+
+    return json;
+  }
+
+  async function persistSelectionHelperMarketData(payload) {
+    const messages = [];
+    const csrfToken = String((form.querySelector('[name="_token"]') || {}).value || "");
+    let savedCount = 0;
+
+    if (csrfToken === "") {
+      messages.push("Token tidak tersedia, data helper tidak disimpan ke database harga.");
+      return { ok: false, itemMatch: null, materialMatches: [], savedCount, messages };
+    }
+
+      const fd = new FormData();
+      fd.append("_token", csrfToken);
+      fd.append("item_name", payload.itemName);
+      fd.append("item_value", String(payload.itemValue || ""));
+      payload.materials.forEach((material, index) => {
+        fd.append(`materials[${index}][name]`, material.name);
+      });
+      payload.rows.forEach((row, rowIndex) => {
+        fd.append(`rows[${rowIndex}][city_ref]`, String(row.cityRef || ""));
+        fd.append(`rows[${rowIndex}][city_id]`, String((row.cityOption && row.cityOption.id) || ""));
+        if (row.craftFee != null) {
+          fd.append(`rows[${rowIndex}][craft_fee]`, String(row.craftFee));
+        }
+        if (row.bonus != null) {
+          fd.append(`rows[${rowIndex}][bonus]`, String(row.bonus));
+        }
+        if (row.sellPrice != null) {
+          fd.append(`rows[${rowIndex}][sell_price]`, String(row.sellPrice));
+        }
+        row.materials.forEach((material, materialIndex) => {
+          if (material.buyPrice != null) {
+            fd.append(`rows[${rowIndex}][materials][${materialIndex}][buy_price]`, String(material.buyPrice));
+          }
+        });
+      });
+
+    try {
+      const json = await postAjaxForm("/api/calculator/helper/persist", fd, "Gagal simpan helper.");
+      const data = json && json.data ? json.data : {};
+      const itemMatch = data && data.item ? data.item : null;
+      const materialMatches = Array.isArray(data && data.materials) ? data.materials : [];
+      savedCount = Number(data && data.saved_price_count ? data.saved_price_count : 0);
+      return { ok: true, itemMatch, materialMatches, savedCount, messages };
+    } catch (err) {
+      messages.push(err instanceof Error ? err.message : "Gagal simpan helper.");
+      return { ok: false, itemMatch: null, materialMatches: [], savedCount, messages };
+    }
+  }
+
+  function applySelectionHelperManualAttention(picks, materialRows) {
+    clearManualAttention();
+
+    const itemValueField = form.querySelector('[name="item_value"]');
+    const outputQtyField = form.querySelector('[name="output_qty"]');
+    const targetOutputField = form.querySelector('[name="target_output_qty"]');
+    registerManualAttention(itemValueField, hasPositiveValue);
+    registerManualAttention(outputQtyField, hasPositiveValue);
+    registerManualAttention(targetOutputField, hasPositiveValue);
+
+    if (!picks.craft || !picks.craft.cityOption) {
+      registerManualAttention(form.querySelector('[name="usage_fee"]'), hasPositiveValue);
+      registerManualAttention(craftFeeCitySelect, hasNonEmptyValue);
+    }
+
+    if (!picks.sell || !picks.sell.cityOption) {
+      registerManualAttention(form.querySelector('[name="sell_price"]'), hasPositiveValue);
+      registerManualAttention(sellPriceCitySelect, hasNonEmptyValue);
+    }
+
+    if (!picks.bonus) {
+      registerManualAttention(form.querySelector('[name="bonus_local"]'), hasNonEmptyValue);
+    }
+    if (picks.bonus && Number(picks.bonus.value || 0) > 0 && (!picks.bonus.cityOption || !hasNonEmptyValue(bonusLocalCitySelect))) {
+      registerManualAttention(bonusLocalCitySelect, hasNonEmptyValue);
+    }
+
+    materialRows.forEach((row) => {
+      const itemValueField = row.querySelector(".material-item-value");
+      const qtyField = row.querySelector(".material-qty");
+      const priceField = row.querySelector(".material-price");
+      const returnTypeField = row.querySelector(".material-type");
+      const cityField = row.querySelector(".material-city");
+      registerManualAttention(itemValueField, hasPositiveValue);
+      registerManualAttention(qtyField, hasPositiveValue);
+      registerManualAttention(returnTypeField, hasNonEmptyValue);
+      if (!hasPositiveValue(priceField)) {
+        registerManualAttention(priceField, hasPositiveValue);
+      }
+      if (!hasNonEmptyValue(cityField)) {
+        registerManualAttention(cityField, hasNonEmptyValue);
+      }
+    });
+
+    refreshManualAttention();
+  }
+
+  async function pushSelectionHelperToForm() {
+    ensureSelectionHelperState();
+    const itemName = upper(selectionHelperState.itemName || "");
+    const itemValue = String(selectionHelperState.itemValue || "").trim();
+    const activeMaterialEntries = selectionHelperState.materials
+      .map((material, index) => ({
+        index,
+        name: upper((material && material.name) || ""),
+      }))
+      .filter((material) => material.name !== "");
+
+    if (!itemName) {
+      setFeedback("Nama item di card bantu wajib diisi.");
+      return;
+    }
+
+    if (activeMaterialEntries.length === 0) {
+      setFeedback("Isi minimal satu nama material di card bantu.");
+      return;
+    }
+
+      const picks = buildSelectionHelperPicks();
+      const helperMaterials = activeMaterialEntries.map((material) => ({ name: material.name }));
+      const helperMaterialPicks = activeMaterialEntries.map((material) => picks.materials[material.index] || null);
+      const helperSaveRows = buildSelectionHelperSaveRows(activeMaterialEntries);
+      const persistResult = await persistSelectionHelperMarketData({
+        itemName,
+        itemValue,
+        materials: helperMaterials,
+        rows: helperSaveRows.rows,
+      });
+      if (helperSaveRows.warnings.length > 0) {
+        persistResult.messages.unshift(helperSaveRows.warnings.join(" "));
+      }
+
+    setFieldValue("item_id", persistResult.itemMatch && persistResult.itemMatch.id ? persistResult.itemMatch.id : "");
+    setFieldValue("item_name", itemName);
+    setFieldValue("bonus_local", picks.bonus ? picks.bonus.value : 0);
+    if (bonusLocalCitySelect) {
+      bonusLocalCitySelect.value = picks.bonus && picks.bonus.cityOption ? String(picks.bonus.cityOption.id || "") : "";
+    }
+    setFieldValue("usage_fee", picks.craft ? picks.craft.value : "");
+    if (craftFeeCitySelect) {
+      craftFeeCitySelect.value = picks.craft && picks.craft.cityOption ? String(picks.craft.cityOption.id || "") : "";
+    }
+    setFieldValue("sell_price", picks.sell ? picks.sell.value : "");
+    if (sellPriceCitySelect) {
+      sellPriceCitySelect.value = picks.sell && picks.sell.cityOption ? String(picks.sell.cityOption.id || "") : "";
+    }
+    setFieldValue("item_value", itemValue);
+    setFieldValue("output_qty", "");
+    setFieldValue("target_output_qty", "");
+
+    clearMaterials();
+    const materialRows = helperMaterials.map((material, index) => addMaterialRow({
+      item_id: persistResult.materialMatches[index] && persistResult.materialMatches[index].id ? persistResult.materialMatches[index].id : "",
+      name: material.name,
+      item_value: persistResult.materialMatches[index] && persistResult.materialMatches[index].item_value != null ? persistResult.materialMatches[index].item_value : "",
+      qty_per_recipe: "",
+      buy_price: helperMaterialPicks[index] ? helperMaterialPicks[index].value : "",
+      return_type: "",
+      allow_blank_return: true,
+      city_id: helperMaterialPicks[index] && helperMaterialPicks[index].cityOption ? helperMaterialPicks[index].cityOption.id : "",
+    }));
+    reindexMaterialNames();
+    applySelectionHelperManualAttention(picks, materialRows);
+    scheduleSave();
+    selectionHelperHasDraft = true;
+    toggleSelectionHelper(false);
+
+    if (!persistResult.ok) {
+      const feedbackLines = ["Input Parameters berhasil diisi dari card bantu, tetapi helper gagal disimpan."];
+      if (persistResult.messages.length > 0) {
+        feedbackLines.push(persistResult.messages.join(" "));
+      }
+      setFeedback(feedbackLines.join(" "));
+    } else if (persistResult.messages.length > 0) {
+      setFeedback(persistResult.messages.join(" "));
+    } else {
+      setFeedback("");
+    }
+
+    const firstManualField = form.querySelector(".manual-attention-field");
+    if (firstManualField instanceof HTMLElement) {
+      firstManualField.focus();
+    }
   }
 
   const itemNameInput = form.querySelector('[name="item_name"]');
@@ -964,7 +1881,162 @@
     tooltipImageStage.addEventListener("pointerleave", stopPointer);
   }
 
-  addMaterialBtn.addEventListener("click", () => addMaterialRow());
+  if (addMaterialBtn) {
+    addMaterialBtn.addEventListener("click", () => addMaterialRow());
+  }
+
+  if (openSelectionHelperBtn) {
+    openSelectionHelperBtn.addEventListener("click", () => {
+      setFeedback("");
+      toggleSelectionHelper(true);
+    });
+  }
+
+  if (closeSelectionHelperBtn) {
+    closeSelectionHelperBtn.addEventListener("click", () => toggleSelectionHelper(false));
+  }
+
+  if (selectionHelperNames) {
+    selectionHelperNames.addEventListener("input", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      const helperNameType = target.dataset.helperName || "";
+
+      if (helperNameType === "item") {
+        target.value = upper(target.value);
+        selectionHelperState.itemName = target.value;
+        selectionHelperHasDraft = true;
+        return;
+      }
+
+      if (helperNameType === "item_value") {
+        selectionHelperState.itemValue = target.value;
+        selectionHelperHasDraft = true;
+        return;
+      }
+
+      if (helperNameType === "material") {
+        const index = Number(target.dataset.materialIndex || "-1");
+        if (index < 0) return;
+        target.value = upper(target.value);
+        if (!selectionHelperState.materials[index]) {
+          selectionHelperState.materials[index] = { name: "" };
+        }
+        selectionHelperState.materials[index].name = target.value;
+        selectionHelperHasDraft = true;
+        renderSelectionHelperTable();
+        renderSelectionHelperSummary();
+      }
+    });
+
+    selectionHelperNames.addEventListener("click", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const removeMaterialBtn = target.closest("[data-helper-remove-material]");
+      if (!removeMaterialBtn) return;
+
+      const materialIndex = Number(removeMaterialBtn.getAttribute("data-helper-remove-material") || "-1");
+      if (materialIndex < 0) return;
+      selectionHelperHasDraft = true;
+      removeSelectionHelperMaterial(materialIndex);
+    });
+  }
+
+  if (selectionHelperBody) {
+    selectionHelperBody.addEventListener("input", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLInputElement)) return;
+
+      const rowIndex = Number(target.dataset.helperRowIndex || "-1");
+      if (rowIndex < 0 || !selectionHelperState.rows[rowIndex]) return;
+
+      const field = String(target.dataset.helperField || "");
+      if (field === "city") {
+        target.value = upper(target.value);
+        selectionHelperState.rows[rowIndex].city = target.value;
+      } else if (field === "material") {
+        const materialIndex = Number(target.dataset.helperMaterialIndex || "-1");
+        if (materialIndex < 0) return;
+        if (!Array.isArray(selectionHelperState.rows[rowIndex].materials)) {
+          selectionHelperState.rows[rowIndex].materials = new Array(selectionHelperState.materials.length).fill("");
+        }
+        selectionHelperState.rows[rowIndex].materials[materialIndex] = target.value;
+      } else if (field === "craftFee" || field === "bonus" || field === "itemPrice") {
+        selectionHelperState.rows[rowIndex][field] = target.value;
+      }
+
+      selectionHelperHasDraft = true;
+      renderSelectionHelperSummary();
+    });
+
+    selectionHelperBody.addEventListener("click", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const removeRowBtn = target.closest("[data-helper-remove-row]");
+      if (!removeRowBtn) return;
+
+      const rowIndex = Number(removeRowBtn.getAttribute("data-helper-remove-row") || "-1");
+      if (rowIndex < 0) return;
+
+      if (selectionHelperState.rows.length <= 1) {
+        selectionHelperState.rows[0] = createSelectionHelperRow("", "", "", "", new Array(selectionHelperState.materials.length).fill(""));
+      } else {
+        selectionHelperState.rows.splice(rowIndex, 1);
+      }
+
+      selectionHelperHasDraft = true;
+      renderSelectionHelper();
+    });
+  }
+
+  if (helperAddCityBtn) {
+    helperAddCityBtn.addEventListener("click", () => {
+      ensureSelectionHelperState();
+      selectionHelperState.rows.push(
+        createSelectionHelperRow("", "", "", "", new Array(selectionHelperState.materials.length).fill(""))
+      );
+      selectionHelperHasDraft = true;
+      renderSelectionHelper();
+    });
+  }
+
+  if (helperAddMaterialBtn) {
+    helperAddMaterialBtn.addEventListener("click", () => {
+      ensureSelectionHelperState();
+      selectionHelperState.materials.push({ name: "" });
+      selectionHelperState.rows.forEach((row) => {
+        if (!Array.isArray(row.materials)) {
+          row.materials = [];
+        }
+        row.materials.push("");
+      });
+      selectionHelperHasDraft = true;
+      renderSelectionHelper();
+    });
+  }
+
+  if (helperClearBtn) {
+    helperClearBtn.addEventListener("click", () => {
+      resetSelectionHelperState();
+      setFeedback("");
+    });
+  }
+
+  if (helperPushBtn) {
+    helperPushBtn.addEventListener("click", async () => {
+      setFeedback("");
+      helperPushBtn.disabled = true;
+      try {
+        await pushSelectionHelperToForm();
+      } catch (err) {
+        setFeedback(err instanceof Error ? err.message : "Gagal push data bantu ke Input Parameters.");
+      } finally {
+        helperPushBtn.disabled = false;
+      }
+    });
+  }
 
   function openSidebar() {
     if (!sidebar || !sidebarBackdrop) return;
@@ -1003,6 +2075,9 @@
     closeTooltipPopover();
     closeTooltipImageModal();
     closeHelpModal();
+    if (selectionHelperCard && !selectionHelperCard.hidden) {
+      toggleSelectionHelper(false);
+    }
   });
 
   function serializeState() {
@@ -1021,10 +2096,11 @@
       materials.push({
         item_id: inputs[0].value,
         name: inputs[1].value,
-        qty_per_recipe: inputs[2].value,
-        buy_price: inputs[3].value,
-        return_type: inputs[4].value,
-        city_id: inputs[5].value,
+        item_value: inputs[2].value,
+        qty_per_recipe: inputs[3].value,
+        buy_price: inputs[4].value,
+        return_type: inputs[5].value,
+        city_id: inputs[6].value,
       });
     }
 
@@ -1048,6 +2124,7 @@
         addMaterialRow({
           item_id: m && m.item_id != null ? Number(m.item_id) : 0,
           name: (m && m.name) || "",
+          item_value: m && m.item_value != null ? m.item_value : "",
           qty_per_recipe: m && m.qty_per_recipe != null ? Number(m.qty_per_recipe) : 0,
           buy_price: m && m.buy_price != null ? Number(m.buy_price) : 0,
           return_type: (m && m.return_type) || "RETURN",
@@ -1087,14 +2164,24 @@
     defaultMaterials();
   }
   reindexMaterialNames();
+  renderSelectionHelper();
+  refreshManualAttention();
 
-  form.addEventListener("input", scheduleSave);
-  form.addEventListener("change", scheduleSave);
+  form.addEventListener("input", () => {
+    scheduleSave();
+    refreshManualAttention();
+  });
+  form.addEventListener("change", () => {
+    scheduleSave();
+    refreshManualAttention();
+  });
 
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
       form.reset();
+      clearManualAttention();
+      resetSelectionHelperState(false);
       setFieldValue("item_id", "");
       defaultMaterials();
       setFeedback("");
@@ -1102,6 +2189,7 @@
       // Ensure required numeric field stays at HTML default after reset.
       const t = form.querySelector('[name="target_output_qty"]');
       if (t && (!t.value || String(t.value).trim() === "")) t.value = "100";
+      refreshManualAttention();
       scheduleSave();
     });
   }
@@ -1159,15 +2247,7 @@
         fd.append("item_id", String(itemId));
         fd.append("city_id", String(cityId));
         fd.append("usage_fee", String(usageFee));
-        const res = await fetch("/api/calculator/craft-fee/save", {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-          body: fd,
-        });
-        const json = await res.json().catch(() => null);
-        if (!json || json.success !== true) {
-          throw new Error((json && json.message) || "Gagal simpan craft price.");
-        }
+        await postAjaxForm("/api/calculator/craft-fee/save", fd, "Gagal simpan craft price.");
         setFeedback("Craft price berhasil disimpan.", "success");
       } catch (err) {
         setFeedback(err instanceof Error ? err.message : "Gagal simpan craft price.");
@@ -1201,15 +2281,7 @@
         fd.append("item_id", String(itemId));
         fd.append("city_id", String(cityId));
         fd.append("sell_price", String(sellPrice));
-        const res = await fetch("/api/calculator/sell-price/save", {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-          body: fd,
-        });
-        const json = await res.json().catch(() => null);
-        if (!json || json.success !== true) {
-          throw new Error((json && json.message) || "Gagal simpan harga jual.");
-        }
+        await postAjaxForm("/api/calculator/sell-price/save", fd, "Gagal simpan harga jual.");
         setFeedback("Harga jual berhasil disimpan.", "success");
       } catch (err) {
         setFeedback(err instanceof Error ? err.message : "Gagal simpan harga jual.");
@@ -1251,15 +2323,7 @@
           fd.append(`materials[${i}][city_id]`, String(materials[i].city_id));
           fd.append(`materials[${i}][buy_price]`, String(materials[i].buy_price));
         }
-        const res = await fetch("/api/calculator/material-prices/save", {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-          body: fd,
-        });
-        const json = await res.json().catch(() => null);
-        if (!json || json.success !== true) {
-          throw new Error((json && json.message) || "Gagal simpan harga material.");
-        }
+        const json = await postAjaxForm("/api/calculator/material-prices/save", fd, "Gagal simpan harga material.");
         setFeedback(json.message || "Harga material berhasil disimpan.", "success");
       } catch (err) {
         setFeedback(err instanceof Error ? err.message : "Gagal simpan harga material.");
@@ -1281,33 +2345,46 @@
       const name = inputs[1].value.trim();
       const normalizedName = upper(name);
       inputs[1].value = normalizedName;
-      const qty = Number(inputs[2].value || "0");
-      const price = Number(inputs[3].value || "0");
-      const rt = String(inputs[4].value || "RETURN");
-      materials.push({ name: normalizedName, qty_per_recipe: qty, buy_price: price, return_type: rt });
+      const itemValue = Number(inputs[2].value || "0");
+      const qty = Number(inputs[3].value || "0");
+      const price = Number(inputs[4].value || "0");
+      const rt = String(inputs[5].value || "RETURN");
+      const cityId = Number(inputs[6].value || "0");
+      materials.push({
+        item_id: Number(inputs[0].value || "0"),
+        name: normalizedName,
+        item_value: itemValue,
+        qty_per_recipe: qty,
+        buy_price: price,
+        return_type: rt,
+        city_id: cityId,
+      });
     }
 
-    const payload = {
-      item_name: upper(String(fd.get("item_name") || "")),
-      bonus_basic: readNumber(fd, "bonus_basic"),
-      bonus_local: readNumber(fd, "bonus_local"),
-      bonus_daily: readNumber(fd, "bonus_daily"),
-      return_rounding_mode: String(fd.get("return_rounding_mode") || "SPREADSHEET_BULK"),
-      craft_with_focus: String(fd.get("craft_with_focus")) === "1",
-      focus_points: readNumber(fd, "focus_points"),
-      focus_per_craft: readNumber(fd, "focus_per_craft"),
-      usage_fee: readNumber(fd, "usage_fee"),
-      item_value: readNumber(fd, "item_value"),
-      output_qty: readInt(fd, "output_qty"),
-      target_output_qty: readInt(fd, "target_output_qty"),
-      premium_status: String(fd.get("premium_status")) === "1",
-      materials,
-    };
+      const payload = {
+        item_name: upper(String(fd.get("item_name") || "")),
+        bonus_basic: readNumber(fd, "bonus_basic"),
+        bonus_local: readNumber(fd, "bonus_local"),
+        bonus_local_city_id: readInt(fd, "bonus_local_city_id"),
+        bonus_daily: readNumber(fd, "bonus_daily"),
+        return_rounding_mode: String(fd.get("return_rounding_mode") || "SPREADSHEET_BULK"),
+        craft_with_focus: String(fd.get("craft_with_focus")) === "1",
+        focus_points: readNumber(fd, "focus_points"),
+        focus_per_craft: readNumber(fd, "focus_per_craft"),
+        usage_fee: readNumber(fd, "usage_fee"),
+        craft_fee_city_id: readInt(fd, "craft_fee_city_id"),
+        item_value: readNumber(fd, "item_value"),
+        output_qty: readInt(fd, "output_qty"),
+        target_output_qty: readInt(fd, "target_output_qty"),
+        premium_status: String(fd.get("premium_status")) === "1",
+        materials,
+      };
 
-    const rawSell = fd.get("sell_price");
-    if (rawSell != null && String(rawSell).trim() !== "") {
-      payload.sell_price = Number(rawSell);
-    }
+      const rawSell = fd.get("sell_price");
+      if (rawSell != null && String(rawSell).trim() !== "") {
+        payload.sell_price = Number(rawSell);
+      }
+      payload.sell_price_city_id = readInt(fd, "sell_price_city_id");
 
     if (!payload.item_name || payload.item_name.trim() === "") {
       setFeedback("Nama Item wajib diisi.");
@@ -1373,6 +2450,31 @@
     }
 
     const d = json.data;
+    const meta = json.meta || {};
+    const masterSync = meta.master_sync || null;
+    if (masterSync && masterSync.ok === true && masterSync.data) {
+      const syncedItem = masterSync.data.item || null;
+      if (syncedItem && syncedItem.id) {
+        setFieldValue("item_id", syncedItem.id);
+      }
+
+      const syncedMaterials = Array.isArray(masterSync.data.materials) ? masterSync.data.materials : [];
+      const materialRows = materialsRoot ? materialsRoot.querySelectorAll(".calc-material-row") : [];
+      materialRows.forEach((row, index) => {
+        const syncedMaterial = syncedMaterials[index] || null;
+        if (!syncedMaterial) return;
+
+        const itemIdField = row.querySelector(".material-item-id");
+        const itemValueField = row.querySelector(".material-item-value");
+        if (itemIdField && "value" in itemIdField) {
+          itemIdField.value = String(syncedMaterial.id || "");
+        }
+        if (itemValueField && "value" in itemValueField) {
+          itemValueField.value = syncedMaterial.item_value != null ? String(syncedMaterial.item_value) : String(itemValueField.value || "");
+        }
+      });
+      reindexMaterialNames();
+    }
     renderMaterialSummary(d.materials);
     renderFocusSummary(d.focus);
     renderMaterialFields(d.material_fields);

@@ -41,6 +41,18 @@ final class CalculationHistoryService
             return null;
         }
 
+        $duplicate = $this->histories->findExactDuplicate(
+            $userId,
+            $payload['item_id'],
+            $payload['plan_code'],
+            $payload['calculation_mode'],
+            $payload['input_snapshot'],
+            $payload['output_snapshot']
+        );
+        if ($duplicate !== null) {
+            return (int) ($duplicate['id'] ?? 0);
+        }
+
         return $this->histories->create($payload);
     }
 

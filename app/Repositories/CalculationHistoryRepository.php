@@ -34,6 +34,56 @@ final class CalculationHistoryRepository
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findExactDuplicate(
+        int $userId,
+        ?int $itemId,
+        string $planCode,
+        string $calculationMode,
+        string $inputSnapshot,
+        string $outputSnapshot
+    ): ?array {
+        $params = [
+            'user_id' => $userId,
+            'plan_code' => $planCode,
+            'calculation_mode' => $calculationMode,
+            'input_snapshot' => $inputSnapshot,
+            'output_snapshot' => $outputSnapshot,
+        ];
+
+        if ($itemId === null) {
+            $sql = 'SELECT *
+                    FROM calculation_histories
+                    WHERE user_id = :user_id
+                      AND item_id IS NULL
+                      AND plan_code = :plan_code
+                      AND calculation_mode = :calculation_mode
+                      AND input_snapshot = :input_snapshot
+                      AND output_snapshot = :output_snapshot
+                    ORDER BY id DESC
+                    LIMIT 1';
+        } else {
+            $sql = 'SELECT *
+                    FROM calculation_histories
+                    WHERE user_id = :user_id
+                      AND item_id = :item_id
+                      AND plan_code = :plan_code
+                      AND calculation_mode = :calculation_mode
+                      AND input_snapshot = :input_snapshot
+                      AND output_snapshot = :output_snapshot
+                    ORDER BY id DESC
+                    LIMIT 1';
+            $params['item_id'] = $itemId;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function listRecentByUser(int $userId, int $limit = 20): array
