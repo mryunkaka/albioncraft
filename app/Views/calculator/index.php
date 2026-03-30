@@ -18,6 +18,10 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
+      .calculator-inline-grid.cols-4-item-main {
+        grid-template-columns: minmax(0, 1.9fr) minmax(110px, .7fr) minmax(140px, .9fr) minmax(140px, .9fr);
+      }
+
       .calculator-inline-grid.cols-5 {
         grid-template-columns: repeat(5, minmax(0, 1fr));
       }
@@ -381,9 +385,20 @@
       min-width: 110px;
     }
 
-    .selection-helper-table .helper-city-input {
-      min-width: 120px;
-      text-transform: uppercase;
+    .selection-helper-table .helper-city-select {
+      min-width: 150px;
+    }
+
+    .selection-helper-item-value-input,
+    .selection-helper-material-value-input {
+      max-width: 130px;
+    }
+
+    .selection-helper-dual-input {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(110px, 130px);
+      gap: .5rem;
+      align-items: start;
     }
 
     .selection-helper-actions {
@@ -615,7 +630,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
   <div class="card-title-row">
     <div>
       <h2 class="card-title">Bantu Seleksi Item</h2>
-      <p class="selection-helper-note">Isi nama item, nama material, lalu bandingkan data per kota. Tombol push akan memilih craft fee termurah, bonus tertinggi, harga item tertinggi, dan harga material termurah untuk tiap material.</p>
+      <p class="selection-helper-note">Isi nama item, item value, nama material, dan item value material. Bandingkan data per kota, lalu tombol push akan memilih craft fee termurah, bonus tertinggi, harga item tertinggi, dan harga material termurah untuk tiap material.</p>
     </div>
     <button class="button button-ghost" type="button" id="close-selection-helper-btn">Kembali ke Input</button>
   </div>
@@ -682,10 +697,10 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
       </label>
     </div>
 
-    <div class="calculator-inline-grid cols-4">
+    <div class="calculator-inline-grid cols-4 cols-4-item-main">
       <label class="field">
         <?php renderCalculatorLabel('Nama Item', 'item_name', $calculatorTooltips); ?>
-        <input class="input" name="item_name" type="text" value="" placeholder="Contoh: ENERGY POTION T4" autocomplete="off" required>
+        <input class="input" name="item_name" type="text" value="" placeholder="Contoh: BELATI PENGEMBARA T3.0 atau BELATI PENGEMBARA T3.3" autocomplete="off" required>
       </label>
       <label class="field">
         <?php renderCalculatorLabel('Item Value', 'item_value', $calculatorTooltips); ?>
@@ -978,5 +993,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 <script id="calculator-tooltip-map" type="application/json">
   <?= json_encode($calculatorTooltips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 </script>
-<script src="/assets/calculator.js?v=20260329-05"></script>
+<script src="/assets/calculator.js?v=20260330-01"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

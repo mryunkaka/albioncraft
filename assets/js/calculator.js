@@ -87,6 +87,7 @@
   const manualAttentionRules = [];
   let selectionHelperState = createDefaultSelectionHelperState();
   let selectionHelperHasDraft = false;
+  let selectionHelperVisible = false;
   let lastRenderedAnalysisText = "";
   let csrfRefreshPromise = null;
 
@@ -471,15 +472,10 @@
       itemName: "",
       itemValue: "",
       materials: [
-        { name: "" },
-        { name: "" },
+        { name: "", itemValue: "" },
       ],
       rows: [
-        createSelectionHelperRow("BW", 595, 25, 2295, [256, 230]),
-        createSelectionHelperRow("ML", 750, 10, 2700, [228, 230]),
-        createSelectionHelperRow("TF", 500, 10, 1500, [219, 228]),
-        createSelectionHelperRow("FS", 560, 10, 2990, [234, 228]),
-        createSelectionHelperRow("LM", 440, 10, 4400, [275, 247]),
+        createSelectionHelperRow("", "", "", "", [""]),
       ],
     };
   }
@@ -501,6 +497,7 @@
 
     selectionHelperState.materials = selectionHelperState.materials.map((material) => ({
       name: upper((material && material.name) || ""),
+      itemValue: material && material.itemValue != null ? String(material.itemValue) : "",
     }));
 
     if (!Array.isArray(selectionHelperState.rows) || selectionHelperState.rows.length === 0) {
@@ -545,6 +542,14 @@
   }
 
   function findCityOptionByReference(reference) {
+    const rawReference = String(reference == null ? "" : reference).trim();
+    if (rawReference !== "") {
+      const directMatch = cityOptions.find((option) => String(option.id || "") === rawReference);
+      if (directMatch) {
+        return directMatch;
+      }
+    }
+
     const targetKeys = cityLookupKeysForValue(reference);
     if (targetKeys.size === 0) return null;
 
@@ -574,6 +579,18 @@
     const material = selectionHelperState.materials[index] || null;
     const name = material ? String(material.name || "").trim() : "";
     return name !== "" ? name : `Material ${index + 1}`;
+  }
+
+  function buildHelperCityOptionsHtml(selectedValue) {
+    const selectedOption = findCityOptionByReference(selectedValue);
+    const currentValue = selectedOption ? String(selectedOption.id || "") : String(selectedValue == null ? "" : selectedValue);
+    const options = ['<option value="">Pilih kota</option>'];
+    for (const option of cityOptions) {
+      const value = String(option.id || "");
+      const selected = value === currentValue ? " selected" : "";
+      options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(String(option.name || ""))}</option>`);
+    }
+    return options.join("");
   }
 
   function buildSelectionHelperPicks() {
@@ -644,7 +661,7 @@
       }
 
       rows.push({
-        cityRef,
+        cityRef: String(cityOption.name || cityRef),
         cityOption,
         craftFee,
         bonus,
@@ -691,39 +708,26 @@
     if (!selectionHelperNames) return;
     selectionHelperNames.innerHTML = "";
 
-    const itemField = document.createElement("label");
+    const itemField = document.createElement("div");
     itemField.className = "field";
     itemField.innerHTML = `
       <span class="field-label selection-helper-name-label">
         <span class="selection-helper-name-text">Nama Item Craft</span>
-        <span class="selection-helper-name-action-slot">
-          <span class="button button-ghost selection-helper-remove-material selection-helper-remove-material-spacer" aria-hidden="true">Hapus Material</span>
-        </span>
       </span>
-      <input class="input" type="text" data-helper-name="item" placeholder="Isi nama item">
+      <div class="selection-helper-dual-input">
+        <input class="input" type="text" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T3.0 atau BELATI PENGEMBARA T3.3">
+        <input class="input selection-helper-item-value-input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Item value">
+      </div>
     `;
-    const itemInput = itemField.querySelector("input");
+    const itemInput = itemField.querySelector('[data-helper-name="item"]');
     if (itemInput) {
       itemInput.value = String(selectionHelperState.itemName || "");
     }
-    selectionHelperNames.appendChild(itemField);
-
-    const itemValueField = document.createElement("label");
-    itemValueField.className = "field";
-    itemValueField.innerHTML = `
-      <span class="field-label selection-helper-name-label">
-        <span class="selection-helper-name-text">Item Value</span>
-        <span class="selection-helper-name-action-slot">
-          <span class="button button-ghost selection-helper-remove-material selection-helper-remove-material-spacer" aria-hidden="true">Hapus Material</span>
-        </span>
-      </span>
-      <input class="input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Isi item value">
-    `;
-    const itemValueInput = itemValueField.querySelector("input");
+    const itemValueInput = itemField.querySelector('[data-helper-name="item_value"]');
     if (itemValueInput) {
       itemValueInput.value = String(selectionHelperState.itemValue || "");
     }
-    selectionHelperNames.appendChild(itemValueField);
+    selectionHelperNames.appendChild(itemField);
 
     selectionHelperState.materials.forEach((material, index) => {
       const field = document.createElement("div");
@@ -735,11 +739,18 @@
             <button class="button button-ghost selection-helper-remove-material" type="button" data-helper-remove-material="${index}">Hapus Material</button>
           </span>
         </span>
-        <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Isi nama material ${index + 1}">
+        <div class="selection-helper-dual-input">
+          <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Isi nama material ${index + 1}">
+          <input class="input selection-helper-material-value-input" type="number" step="0.01" min="0" data-helper-name="material_item_value" data-material-index="${index}" placeholder="Item value">
+        </div>
       `;
-      const input = field.querySelector("input");
+      const input = field.querySelector('[data-helper-name="material"]');
       if (input) {
         input.value = String((material && material.name) || "");
+      }
+      const itemValueInput = field.querySelector('[data-helper-name="material_item_value"]');
+      if (itemValueInput) {
+        itemValueInput.value = String((material && material.itemValue) || "");
       }
       selectionHelperNames.appendChild(field);
     });
@@ -753,7 +764,7 @@
       "<th>Kota</th>",
       "<th class=\"right\">Craft Fee</th>",
       "<th class=\"right\">Bonus</th>",
-      "<th class=\"right\">Harga Item Craft</th>",
+      `<th class="right">${escapeHtml(String(selectionHelperState.itemName || "").trim() !== "" ? `Harga ${selectionHelperState.itemName}` : "Harga Item Craft")}</th>`,
     ];
 
     selectionHelperState.materials.forEach((_, index) => {
@@ -783,14 +794,13 @@
       return `
         <tr>
           <td>
-            <input
-              class="input helper-city-input"
-              type="text"
-              value="${escapeHtml(toInputValue(row.city))}"
+            <select
+              class="select helper-city-select"
               data-helper-row-index="${rowIndex}"
               data-helper-field="city"
-              placeholder="BW / Martlock"
             >
+              ${buildHelperCityOptionsHtml(row.city)}
+            </select>
           </td>
           <td>
             <input
@@ -890,15 +900,20 @@
     if (materialRows.length > 0 && materialNames.some(Boolean) && !isDefaultExample) {
       selectionHelperState.materials = materialRows.map((row) => {
         const field = row.querySelector(".material-name");
-        return { name: upper((field && field.value) || "") };
+        const itemValueField = row.querySelector(".material-item-value");
+        return {
+          name: upper((field && field.value) || ""),
+          itemValue: String((itemValueField && itemValueField.value) || "").trim(),
+        };
       });
       ensureSelectionHelperState();
     }
   }
 
-  function toggleSelectionHelper(show) {
+  function toggleSelectionHelper(show, scroll = true) {
     if (!selectionHelperCard || !inputParametersCard) return;
 
+    selectionHelperVisible = !!show;
     if (show) {
       if (!selectionHelperHasDraft) {
         syncSelectionHelperFromCurrentForm();
@@ -906,13 +921,19 @@
       renderSelectionHelper();
       inputParametersCard.hidden = true;
       selectionHelperCard.hidden = false;
-      selectionHelperCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      scheduleSave();
+      if (scroll) {
+        selectionHelperCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       return;
     }
 
     selectionHelperCard.hidden = true;
     inputParametersCard.hidden = false;
-    inputParametersCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    scheduleSave();
+    if (scroll) {
+      inputParametersCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   function responsePath(url) {
@@ -1093,6 +1114,7 @@
       fd.append("item_value", String(payload.itemValue || ""));
       payload.materials.forEach((material, index) => {
         fd.append(`materials[${index}][name]`, material.name);
+        fd.append(`materials[${index}][item_value]`, String(material.item_value || ""));
       });
       payload.rows.forEach((row, rowIndex) => {
         fd.append(`rows[${rowIndex}][city_ref]`, String(row.cityRef || ""));
@@ -1181,6 +1203,7 @@
       .map((material, index) => ({
         index,
         name: upper((material && material.name) || ""),
+        itemValue: String((material && material.itemValue) || "").trim(),
       }))
       .filter((material) => material.name !== "");
 
@@ -1195,7 +1218,10 @@
     }
 
       const picks = buildSelectionHelperPicks();
-      const helperMaterials = activeMaterialEntries.map((material) => ({ name: material.name }));
+      const helperMaterials = activeMaterialEntries.map((material) => ({
+        name: material.name,
+        item_value: material.itemValue,
+      }));
       const helperMaterialPicks = activeMaterialEntries.map((material) => picks.materials[material.index] || null);
       const helperSaveRows = buildSelectionHelperSaveRows(activeMaterialEntries);
       const persistResult = await persistSelectionHelperMarketData({
@@ -1230,7 +1256,9 @@
     const materialRows = helperMaterials.map((material, index) => addMaterialRow({
       item_id: persistResult.materialMatches[index] && persistResult.materialMatches[index].id ? persistResult.materialMatches[index].id : "",
       name: material.name,
-      item_value: persistResult.materialMatches[index] && persistResult.materialMatches[index].item_value != null ? persistResult.materialMatches[index].item_value : "",
+      item_value: persistResult.materialMatches[index] && persistResult.materialMatches[index].item_value != null
+        ? persistResult.materialMatches[index].item_value
+        : material.item_value,
       qty_per_recipe: "",
       buy_price: helperMaterialPicks[index] ? helperMaterialPicks[index].value : "",
       return_type: "",
@@ -1906,12 +1934,15 @@
         target.value = upper(target.value);
         selectionHelperState.itemName = target.value;
         selectionHelperHasDraft = true;
+        scheduleSave();
+        renderSelectionHelperTable();
         return;
       }
 
       if (helperNameType === "item_value") {
         selectionHelperState.itemValue = target.value;
         selectionHelperHasDraft = true;
+        scheduleSave();
         return;
       }
 
@@ -1924,8 +1955,21 @@
         }
         selectionHelperState.materials[index].name = target.value;
         selectionHelperHasDraft = true;
+        scheduleSave();
         renderSelectionHelperTable();
         renderSelectionHelperSummary();
+        return;
+      }
+
+      if (helperNameType === "material_item_value") {
+        const index = Number(target.dataset.materialIndex || "-1");
+        if (index < 0) return;
+        if (!selectionHelperState.materials[index]) {
+          selectionHelperState.materials[index] = { name: "", itemValue: "" };
+        }
+        selectionHelperState.materials[index].itemValue = target.value;
+        selectionHelperHasDraft = true;
+        scheduleSave();
       }
     });
 
@@ -1940,6 +1984,7 @@
       if (materialIndex < 0) return;
       selectionHelperHasDraft = true;
       removeSelectionHelperMaterial(materialIndex);
+      scheduleSave();
     });
   }
 
@@ -1952,10 +1997,7 @@
       if (rowIndex < 0 || !selectionHelperState.rows[rowIndex]) return;
 
       const field = String(target.dataset.helperField || "");
-      if (field === "city") {
-        target.value = upper(target.value);
-        selectionHelperState.rows[rowIndex].city = target.value;
-      } else if (field === "material") {
+      if (field === "material") {
         const materialIndex = Number(target.dataset.helperMaterialIndex || "-1");
         if (materialIndex < 0) return;
         if (!Array.isArray(selectionHelperState.rows[rowIndex].materials)) {
@@ -1967,6 +2009,22 @@
       }
 
       selectionHelperHasDraft = true;
+      scheduleSave();
+      renderSelectionHelperSummary();
+    });
+
+    selectionHelperBody.addEventListener("change", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+
+      const rowIndex = Number(target.dataset.helperRowIndex || "-1");
+      if (rowIndex < 0 || !selectionHelperState.rows[rowIndex]) return;
+
+      if (String(target.dataset.helperField || "") !== "city") return;
+
+      selectionHelperState.rows[rowIndex].city = target.value;
+      selectionHelperHasDraft = true;
+      scheduleSave();
       renderSelectionHelperSummary();
     });
 
@@ -1988,6 +2046,7 @@
 
       selectionHelperHasDraft = true;
       renderSelectionHelper();
+      scheduleSave();
     });
   }
 
@@ -1999,13 +2058,14 @@
       );
       selectionHelperHasDraft = true;
       renderSelectionHelper();
+      scheduleSave();
     });
   }
 
   if (helperAddMaterialBtn) {
     helperAddMaterialBtn.addEventListener("click", () => {
       ensureSelectionHelperState();
-      selectionHelperState.materials.push({ name: "" });
+      selectionHelperState.materials.push({ name: "", itemValue: "" });
       selectionHelperState.rows.forEach((row) => {
         if (!Array.isArray(row.materials)) {
           row.materials = [];
@@ -2014,6 +2074,7 @@
       });
       selectionHelperHasDraft = true;
       renderSelectionHelper();
+      scheduleSave();
     });
   }
 
@@ -2021,6 +2082,7 @@
     helperClearBtn.addEventListener("click", () => {
       resetSelectionHelperState();
       setFeedback("");
+      scheduleSave();
     });
   }
 
@@ -2104,7 +2166,15 @@
       });
     }
 
-    return { fields, materials };
+    return {
+      fields,
+      materials,
+      helper: {
+        state: selectionHelperState,
+        hasDraft: selectionHelperHasDraft,
+        visible: selectionHelperVisible,
+      },
+    };
   }
 
   function applyState(state) {
@@ -2132,6 +2202,15 @@
         });
       }
       reindexMaterialNames();
+    }
+
+    if (state.helper && typeof state.helper === "object") {
+      if (state.helper.state && typeof state.helper.state === "object") {
+        selectionHelperState = state.helper.state;
+      }
+      selectionHelperHasDraft = !!state.helper.hasDraft;
+      selectionHelperVisible = !!state.helper.visible;
+      ensureSelectionHelperState();
     }
   }
 
@@ -2165,6 +2244,7 @@
   }
   reindexMaterialNames();
   renderSelectionHelper();
+  toggleSelectionHelper(selectionHelperVisible, false);
   refreshManualAttention();
 
   form.addEventListener("input", () => {

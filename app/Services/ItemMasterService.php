@@ -95,10 +95,11 @@ final class ItemMasterService
                     continue;
                 }
 
+                $materialValue = $this->floatValue($row['item_value'] ?? 0);
                 $buyPrice = $this->nullableFloat($row['buy_price'] ?? null);
                 $cityId = $this->nullableInt($row['city_id'] ?? null);
 
-                [$materialItem, $createdMaterialItem] = $this->ensureItem($materialName, $materialCategoryId, 0.0);
+                [$materialItem, $createdMaterialItem] = $this->ensureItem($materialName, $materialCategoryId, $materialValue);
                 if ($createdMaterialItem) {
                     $createdItemCount++;
                 }
@@ -123,7 +124,7 @@ final class ItemMasterService
                     'name' => (string) ($materialItem['name'] ?? $materialName),
                     'item_code' => (string) ($materialItem['item_code'] ?? ''),
                     'slug' => (string) ($materialItem['slug'] ?? ''),
-                    'item_value' => (float) ($materialItem['item_value'] ?? 0),
+                    'item_value' => (float) ($materialItem['item_value'] ?? $materialValue),
                 ];
                 $materialItems[] = $materialItem;
             }
