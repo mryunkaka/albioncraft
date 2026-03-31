@@ -14,12 +14,14 @@ final class AuthMiddleware implements MiddlewareInterface
     public function handle(Request $request): bool
     {
         $auth = Session::get('auth');
-        $authSessions = new AuthSessionService();
-        if (is_array($auth) && $authSessions->isValid($auth)) {
-            return true;
-        }
+        if (is_array($auth)) {
+            $authSessions = new AuthSessionService();
+            if ($authSessions->isValid($auth)) {
+                return true;
+            }
 
-        $authSessions->destroyInvalidSession();
+            $authSessions->destroyInvalidSession();
+        }
 
         if ($request->isAjax()) {
             Response::json([

@@ -63,6 +63,10 @@ final class AuthSessionService
 
     public function destroyInvalidSession(): void
     {
+        if (! Session::has('auth')) {
+            return;
+        }
+
         Session::destroy();
         Session::start();
     }

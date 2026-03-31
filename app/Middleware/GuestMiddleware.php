@@ -15,13 +15,17 @@ final class GuestMiddleware implements MiddlewareInterface
     public function handle(Request $request): bool
     {
         $auth = Session::get('auth');
+        if (! is_array($auth)) {
+            return true;
+        }
+
         $authSessions = new AuthSessionService();
-        if (! is_array($auth) || ! $authSessions->isValid($auth)) {
+        if (! $authSessions->isValid($auth)) {
             $authSessions->destroyInvalidSession();
             return true;
         }
 
-        Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
+        Response::redirect(HomePath::forAuth($auth));
         return false;
     }
 }

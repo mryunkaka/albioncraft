@@ -19,8 +19,14 @@ final class DashboardController
     public function index(Request $request): void
     {
         $auth = Session::get('auth');
+        if (! is_array($auth)) {
+            Session::flash('error', 'Silakan login dulu.');
+            Response::redirect('/login');
+            return;
+        }
+
         $authSessions = new AuthSessionService();
-        if (! is_array($auth) || ! $authSessions->isValid($auth)) {
+        if (! $authSessions->isValid($auth)) {
             $authSessions->destroyInvalidSession();
             Session::flash('error', 'Silakan login dulu.');
             Response::redirect('/login');

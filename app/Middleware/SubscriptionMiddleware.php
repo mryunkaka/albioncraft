@@ -15,8 +15,24 @@ final class SubscriptionMiddleware implements MiddlewareInterface
     public function handle(Request $request): bool
     {
         $auth = Session::get('auth');
+        if (! is_array($auth) || ! isset($auth['user_id'])) {
+            if ($request->isAjax()) {
+                Response::json([
+                    'success' => false,
+                    'message' => 'Silakan login dulu. Session user untuk sinkronisasi plan tidak ditemukan.',
+                    'error_code' => 'AUTH_REQUIRED',
+                    'redirect_to' => '/login',
+                ], 401);
+                return false;
+            }
+
+            Session::flash('error', 'Silakan login dulu.');
+            Response::redirect('/login');
+            return false;
+        }
+
         $authSessions = new AuthSessionService();
-        if (! is_array($auth) || ! isset($auth['user_id']) || ! $authSessions->isValid($auth)) {
+        if (! $authSessions->isValid($auth)) {
             $authSessions->destroyInvalidSession();
             if ($request->isAjax()) {
                 Response::json([

@@ -50,12 +50,15 @@ final class AuthController
     public function showLogin(Request $request): void
     {
         $auth = Session::get('auth');
-        $authSessions = new AuthSessionService();
-        if (is_array($auth) && $authSessions->isValid($auth)) {
-            Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
-            return;
+        if (is_array($auth)) {
+            $authSessions = new AuthSessionService();
+            if ($authSessions->isValid($auth)) {
+                Response::redirect(HomePath::forAuth($auth));
+                return;
+            }
+
+            $authSessions->destroyInvalidSession();
         }
-        $authSessions->destroyInvalidSession();
 
         Response::html(View::render('auth/login', [
             'flash_error' => Session::pullFlash('error'),
@@ -105,12 +108,15 @@ final class AuthController
     public function showRegister(Request $request): void
     {
         $auth = Session::get('auth');
-        $authSessions = new AuthSessionService();
-        if (is_array($auth) && $authSessions->isValid($auth)) {
-            Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
-            return;
+        if (is_array($auth)) {
+            $authSessions = new AuthSessionService();
+            if ($authSessions->isValid($auth)) {
+                Response::redirect(HomePath::forAuth($auth));
+                return;
+            }
+
+            $authSessions->destroyInvalidSession();
         }
-        $authSessions->destroyInvalidSession();
 
         Response::html(View::render('auth/register', [
             'flash_error' => Session::pullFlash('error'),
