@@ -66,6 +66,7 @@ final class RecipeAutoFillService
                     (string) ($row['item_code'] ?? '')
                 ),
                 'created_at' => null,
+                'updated_at' => (string) ($row['updated_at'] ?? ''),
                 'owner_label' => 'Master Recipe',
             ];
         }
@@ -116,6 +117,8 @@ final class RecipeAutoFillService
         $materialPriceMap = [];
         $sellPrice = null;
         $selectedCityCraftFee = null;
+        $selectedSellCityId = null;
+        $selectedCraftFeeCityId = null;
         $recommendations = [
             'best_sell_city' => null,
             'best_craft_fee_city' => null,
@@ -152,10 +155,13 @@ final class RecipeAutoFillService
             if ($craftFeeRows !== []) {
                 $bestCraftFee = $craftFeeRows[0];
                 $recommendations['best_craft_fee_city'] = $this->priceRowToRecommendation($bestCraftFee);
+                $selectedCraftFeeCityId = isset($bestCraftFee['city_id']) ? (int) $bestCraftFee['city_id'] : null;
+                $selectedCityCraftFee = (float) ($bestCraftFee['price_value'] ?? 0);
                 if (($cityId ?? 0) > 0) {
                     foreach ($craftFeeRows as $craftFeeRow) {
                         if ((int) ($craftFeeRow['city_id'] ?? 0) === (int) $cityId) {
                             $selectedCityCraftFee = (float) ($craftFeeRow['price_value'] ?? 0);
+                            $selectedCraftFeeCityId = (int) ($craftFeeRow['city_id'] ?? 0);
                             break;
                         }
                     }
@@ -166,6 +172,16 @@ final class RecipeAutoFillService
             if ($sellRows !== []) {
                 usort($sellRows, static fn (array $a, array $b): int => ((float) ($b['price_value'] ?? 0)) <=> ((float) ($a['price_value'] ?? 0)));
                 $recommendations['best_sell_city'] = $this->priceRowToRecommendation($sellRows[0]);
+                $selectedSellCityId = isset($sellRows[0]['city_id']) ? (int) $sellRows[0]['city_id'] : null;
+                if (($cityId ?? 0) > 0) {
+                    foreach ($sellRows as $sellRow) {
+                        if ((int) ($sellRow['city_id'] ?? 0) === (int) $cityId) {
+                            $selectedSellCityId = (int) ($sellRow['city_id'] ?? 0);
+                            $sellPrice = (float) ($sellRow['price_value'] ?? 0);
+                            break;
+                        }
+                    }
+                }
             }
 
             $groupedBuyRows = $this->prices->listByUserItemsAndType($userId, $materialItemIds, 'BUY');
@@ -206,15 +222,6 @@ final class RecipeAutoFillService
             ];
         }
 
-        $bonus = null;
-        $bonusPercent = 0.0;
-        if (($cityId ?? 0) > 0) {
-            $bonus = $this->recipes->findCityBonus((int) $cityId, (int) ($recipe['category_id'] ?? 0));
-            if ($bonus !== null) {
-                $bonusPercent = (float) ($bonus['bonus_percent'] ?? 0);
-            }
-        }
-
         foreach ($this->recipes->listCityBonusesByCategoryId((int) ($recipe['category_id'] ?? 0)) as $bonusRow) {
             $recommendations['local_bonus_cities'][] = [
                 'city_id' => (int) ($bonusRow['city_id'] ?? 0),
@@ -234,6 +241,33 @@ final class RecipeAutoFillService
             );
         }
 
+        $selectedBonusCityId = ($cityId ?? 0) > 0 ? (int) $cityId : 0;
+        if ($selectedBonusCityId <= 0) {
+            $recommendedCraftCityId = (int) (($recommendations['recommended_craft_city']['city_id'] ?? 0));
+            if ($recommendedCraftCityId > 0) {
+                $selectedBonusCityId = $recommendedCraftCityId;
+            } else {
+                $selectedBonusCityId = $this->bestLocalBonusCityId($recommendations['local_bonus_cities']);
+            }
+        }
+
+        $bonus = null;
+        $bonusPercent = 0.0;
+        if ($selectedBonusCityId > 0) {
+            $bonus = $this->recipes->findCityBonus($selectedBonusCityId, (int) ($recipe['category_id'] ?? 0));
+            if ($bonus !== null) {
+                $bonusPercent = (float) ($bonus['bonus_percent'] ?? 0);
+            }
+        }
+
+        if ($selectedCraftFeeCityId === null && $recommendations['recommended_craft_city'] !== null) {
+            $selectedCraftFeeCityId = (int) (($recommendations['recommended_craft_city']['city_id'] ?? 0) ?: 0);
+        }
+
+        if ($selectedSellCityId === null && $recommendations['best_sell_city'] !== null) {
+            $selectedSellCityId = (int) (($recommendations['best_sell_city']['city_id'] ?? 0) ?: 0);
+        }
+
         return [
             'ok' => true,
             'message' => 'Recipe ditemukan.',
@@ -245,7 +279,9 @@ final class RecipeAutoFillService
                     'item_value' => (float) ($recipe['item_value'] ?? 0),
                     'output_qty' => (int) ($recipe['recipe_output_qty'] ?? $recipe['default_output_qty'] ?? 1),
                     'sell_price' => $sellPrice,
+                    'sell_price_city_id' => $selectedSellCityId,
                     'craft_fee' => $selectedCityCraftFee,
+                    'craft_fee_city_id' => $selectedCraftFeeCityId,
                     'tier' => (string) ($recipe['tier'] ?? ''),
                     'enchantment_level' => (string) ($recipe['enchantment_level'] ?? ''),
                 ],
@@ -255,7 +291,7 @@ final class RecipeAutoFillService
                     'name' => (string) ($recipe['category_name'] ?? ''),
                 ],
                 'city_bonus' => [
-                    'city_id' => $bonus !== null ? (int) ($bonus['city_id'] ?? 0) : ($cityId ?? 0),
+                    'city_id' => $bonus !== null ? (int) ($bonus['city_id'] ?? 0) : $selectedBonusCityId,
                     'city_code' => $bonus !== null ? (string) ($bonus['city_code'] ?? '') : '',
                     'city_name' => $bonus !== null ? (string) ($bonus['city_name'] ?? '') : '',
                     'bonus_percent' => $bonusPercent,
@@ -373,6 +409,7 @@ final class RecipeAutoFillService
                 'qty_per_recipe' => (float) ($material['qty_per_recipe'] ?? 0),
                 'buy_price' => (float) ($material['buy_price'] ?? 0),
                 'return_type' => (string) ($material['return_type'] ?? 'RETURN'),
+                'city_id' => isset($material['city_id']) ? (int) $material['city_id'] : 0,
                 'sort_order' => $index + 1,
             ];
         }
@@ -388,7 +425,9 @@ final class RecipeAutoFillService
                     'item_value' => (float) ($snapshot['item_value'] ?? 0),
                     'output_qty' => (int) ($snapshot['output_qty'] ?? 1),
                     'sell_price' => array_key_exists('sell_price', $snapshot) ? (float) ($snapshot['sell_price'] ?? 0) : null,
+                    'sell_price_city_id' => isset($snapshot['sell_price_city_id']) ? (int) $snapshot['sell_price_city_id'] : null,
                     'craft_fee' => (float) ($snapshot['usage_fee'] ?? 0),
+                    'craft_fee_city_id' => isset($snapshot['craft_fee_city_id']) ? (int) $snapshot['craft_fee_city_id'] : null,
                     'tier' => '',
                     'enchantment_level' => '',
                 ],
@@ -398,7 +437,7 @@ final class RecipeAutoFillService
                     'name' => 'Saved Recipe',
                 ],
                 'city_bonus' => [
-                    'city_id' => 0,
+                    'city_id' => isset($snapshot['bonus_local_city_id']) ? (int) $snapshot['bonus_local_city_id'] : 0,
                     'city_code' => '',
                     'city_name' => '',
                     'bonus_percent' => (float) ($snapshot['bonus_local'] ?? 0),
@@ -434,6 +473,7 @@ final class RecipeAutoFillService
             'item_code' => '',
             'label' => $label,
             'created_at' => $createdAt,
+            'updated_at' => $createdAt,
             'owner_label' => (string) ($row['owner_label'] ?? ''),
         ];
     }
@@ -452,6 +492,30 @@ final class RecipeAutoFillService
             'price_type' => (string) ($row['price_type'] ?? ''),
             'observed_at' => (string) ($row['observed_at'] ?? ''),
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $localBonusCities
+     */
+    private function bestLocalBonusCityId(array $localBonusCities): int
+    {
+        $bestCityId = 0;
+        $bestBonus = null;
+
+        foreach ($localBonusCities as $city) {
+            $cityId = (int) ($city['city_id'] ?? 0);
+            if ($cityId <= 0) {
+                continue;
+            }
+
+            $bonusPercent = (float) ($city['bonus_percent'] ?? 0);
+            if ($bestBonus === null || $bonusPercent > $bestBonus) {
+                $bestBonus = $bonusPercent;
+                $bestCityId = $cityId;
+            }
+        }
+
+        return $bestCityId;
     }
 
     /**

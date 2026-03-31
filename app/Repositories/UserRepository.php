@@ -184,6 +184,80 @@ final class UserRepository
         ]);
     }
 
+    public function deleteCalculatorRecipeLibraryByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM calculator_recipe_library WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteMarketPricesByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM market_prices WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteCalculationHistoriesByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM calculation_histories WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteAdminSubscriptionActionsByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM admin_subscription_actions WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteReferralRewardsByUserIdOrReferralRelation(int $userId): void
+    {
+        $stmt = $this->db->prepare(
+            'DELETE FROM referral_rewards
+             WHERE rewarded_user_id = :user_id
+                OR referral_id IN (
+                    SELECT id
+                    FROM referrals
+                    WHERE referrer_user_id = :user_id_referrer
+                       OR referred_user_id = :user_id_referred
+                )'
+        );
+        $stmt->execute([
+            'user_id' => $userId,
+            'user_id_referrer' => $userId,
+            'user_id_referred' => $userId,
+        ]);
+    }
+
+    public function deleteReferralsByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare(
+            'DELETE FROM referrals
+             WHERE referrer_user_id = :user_id_referrer
+                OR referred_user_id = :user_id_referred'
+        );
+        $stmt->execute([
+            'user_id_referrer' => $userId,
+            'user_id_referred' => $userId,
+        ]);
+    }
+
+    public function deleteSubscriptionLogsByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM subscription_logs WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteSubscriptionsByUserId(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM subscriptions WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+    }
+
+    public function deleteById(int $userId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = :id');
+        $stmt->execute(['id' => $userId]);
+    }
+
     /**
      * @return array{rows: array<int, array<string, mixed>>, total: int}
      */

@@ -9,6 +9,7 @@
 <?php
 $header_title = 'AlbionCraft Admin';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
 ?>
       <section class="page-header">
         <h1 class="page-title">Admin - Pending Subscription Requests</h1>
@@ -49,7 +50,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
                   <td><?= htmlspecialchars((string) (($row['plan_code'] ?? null) ?: '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($row['duration_type'] ?? null) ?: '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($row['duration_days'] ?? null) ?: 0)) ?></td>
-                  <td><?= htmlspecialchars((string) (($row['created_at'] ?? null) ?: '-')) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($row['created_at'] ?? null)) ?></td>
                   <td>
                     <div class="flex gap-2">
                       <form method="post" action="/admin/subscription-requests/approve">

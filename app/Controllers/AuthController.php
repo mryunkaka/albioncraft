@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use App\Services\AuthSessionService;
 use App\Support\AuthRateLimiter;
 use App\Support\Csrf;
 use App\Support\Request;
@@ -48,11 +49,13 @@ final class AuthController
 
     public function showLogin(Request $request): void
     {
-        if (Session::has('auth')) {
-            $auth = Session::get('auth');
+        $auth = Session::get('auth');
+        $authSessions = new AuthSessionService();
+        if (is_array($auth) && $authSessions->isValid($auth)) {
             Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
             return;
         }
+        $authSessions->destroyInvalidSession();
 
         Response::html(View::render('auth/login', [
             'flash_error' => Session::pullFlash('error'),
@@ -101,11 +104,13 @@ final class AuthController
 
     public function showRegister(Request $request): void
     {
-        if (Session::has('auth')) {
-            $auth = Session::get('auth');
+        $auth = Session::get('auth');
+        $authSessions = new AuthSessionService();
+        if (is_array($auth) && $authSessions->isValid($auth)) {
             Response::redirect(HomePath::forAuth(is_array($auth) ? $auth : null));
             return;
         }
+        $authSessions->destroyInvalidSession();
 
         Response::html(View::render('auth/register', [
             'flash_error' => Session::pullFlash('error'),
@@ -153,8 +158,8 @@ final class AuthController
 
     public function logout(Request $request): void
     {
-        Session::destroy();
-        Session::start();
+        $service = new AuthService();
+        $service->logout();
         Session::flash('success', 'Logout berhasil.');
         Response::redirect('/login');
     }

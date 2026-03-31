@@ -9,6 +9,7 @@
 <?php
 $header_title = 'AlbionCraft Admin';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
 ?>
       <section class="page-header">
         <h1 class="page-title">Admin Action History</h1>
@@ -102,7 +103,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
                     <td><?= htmlspecialchars((string) (($row['duration_days'] ?? null) ?: '-')) ?></td>
                     <td><?= htmlspecialchars((string) (($row['actor_label'] ?? null) ?: '-')) ?></td>
                     <td><?= htmlspecialchars((string) (($row['notes'] ?? null) ?: '-')) ?></td>
-                    <td><?= htmlspecialchars((string) (($row['created_at'] ?? null) ?: '-')) ?></td>
+                    <td><?= htmlspecialchars($fmtWib($row['created_at'] ?? null)) ?></td>
                   </tr>
                 <?php endforeach; ?>
               <?php endif; ?>

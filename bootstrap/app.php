@@ -189,6 +189,11 @@ $router->post('/admin/users/plan', [App\Controllers\AdminUserManagementControlle
     App\Middleware\AdminMiddleware::class,
     App\Middleware\CsrfMiddleware::class,
 ]);
+$router->post('/admin/users/delete-permanent', [App\Controllers\AdminUserManagementController::class, 'deletePermanent'], [
+    App\Middleware\AuthMiddleware::class,
+    App\Middleware\AdminMiddleware::class,
+    App\Middleware\CsrfMiddleware::class,
+]);
 
 // Endpoint debug/setup hanya aktif saat APP_DEBUG=1.
 if (Env::get('APP_DEBUG', '0') === '1') {

@@ -9,6 +9,8 @@
 <?php
 $header_title = 'AlbionCraft Admin';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
+$toLocalWib = static fn ($value): string => \App\Support\DateFormatter::datetimeLocalWib(is_scalar($value) ? (string) $value : null);
 
 $overview = is_array($overview ?? null) ? $overview : [];
 $rows = is_array($overview['rows'] ?? null) ? $overview['rows'] : [];
@@ -24,7 +26,7 @@ $selectedUserId = (int) ($overview['user_id'] ?? 0);
 
 $expiryInputValue = '';
 if (is_array($selectedUser) && is_string($selectedUser['plan_expired_at'] ?? null) && trim((string) $selectedUser['plan_expired_at']) !== '') {
-    $expiryInputValue = str_replace(' ', 'T', substr((string) $selectedUser['plan_expired_at'], 0, 16));
+    $expiryInputValue = $toLocalWib($selectedUser['plan_expired_at']);
 }
 ?>
       <section class="page-header">
@@ -85,7 +87,7 @@ if (is_array($selectedUser) && is_string($selectedUser['plan_expired_at'] ?? nul
         <article class="widget">
           <div class="widget-title">Plan Aktif</div>
           <div class="widget-value"><?= htmlspecialchars((string) ($selectedUser['plan_code'] ?? '-')) ?></div>
-          <div class="widget-muted">Expired: <?= htmlspecialchars((string) (($selectedUser['plan_expired_at'] ?? null) ?: '-')) ?></div>
+          <div class="widget-muted">Expired: <?= htmlspecialchars($fmtWib($selectedUser['plan_expired_at'] ?? null)) ?></div>
         </article>
       </section>
 
@@ -122,7 +124,7 @@ if (is_array($selectedUser) && is_string($selectedUser['plan_expired_at'] ?? nul
                     <td><?= htmlspecialchars((string) ($row['email'] ?? '-')) ?></td>
                     <td><?= htmlspecialchars((string) ($row['status'] ?? '-')) ?></td>
                     <td><?= htmlspecialchars((string) ($row['plan_code'] ?? '-')) ?></td>
-                    <td><?= htmlspecialchars((string) (($row['plan_expired_at'] ?? null) ?: '-')) ?></td>
+                    <td><?= htmlspecialchars($fmtWib($row['plan_expired_at'] ?? null)) ?></td>
                     <td><a class="button button-ghost" href="<?= $selectLink ?>">Manage</a></td>
                   </tr>
                 <?php endforeach; ?>
@@ -218,6 +220,25 @@ if (is_array($selectedUser) && is_string($selectedUser['plan_expired_at'] ?? nul
             <p class="text-sm text-slate-600">Pilih FREE untuk downgrade instan. Plan FREE akan mengosongkan expiry user.</p>
             <div class="actions">
               <button class="button button-primary" type="submit">Simpan Plan</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Danger Zone</h2>
+          <p class="text-sm text-slate-600">
+            Hapus akun permanen akan menghapus user ini beserta data terkait seperti subscription, referral, market price, dan history.
+          </p>
+          <form
+            class="form"
+            method="post"
+            action="/admin/users/delete-permanent"
+            onsubmit="return confirm('Hapus permanen user <?= htmlspecialchars((string) ($selectedUser['username'] ?? '')) ?>? Aksi ini tidak bisa dibatalkan.');"
+          >
+            <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
+            <input type="hidden" name="user_id" value="<?= htmlspecialchars((string) ($selectedUser['id'] ?? 0)) ?>">
+            <div class="actions">
+              <button class="button" type="submit" style="background:#b91c1c;color:#fff;border-color:#b91c1c;">Hapus Akun Permanen</button>
             </div>
           </form>
         </section>

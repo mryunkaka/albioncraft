@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AuthSessionService;
 use App\Services\DashboardService;
 use App\Support\Request;
 use App\Support\Response;
@@ -17,13 +18,14 @@ final class DashboardController
 {
     public function index(Request $request): void
     {
-        if (! Session::has('auth')) {
+        $auth = Session::get('auth');
+        $authSessions = new AuthSessionService();
+        if (! is_array($auth) || ! $authSessions->isValid($auth)) {
+            $authSessions->destroyInvalidSession();
             Session::flash('error', 'Silakan login dulu.');
             Response::redirect('/login');
             return;
         }
-
-        $auth = Session::get('auth');
         if (! HomePath::dashboardAllowed(is_array($auth) ? $auth : null)) {
             Session::flash('error', 'Dashboard history hanya tersedia untuk plan Medium dan Pro.');
             Response::redirect('/calculator');

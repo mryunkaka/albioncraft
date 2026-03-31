@@ -251,6 +251,50 @@ final class AdminUserManagementService
         ];
     }
 
+    /**
+     * @return array{ok: bool, message: string, deleted_self?: bool}
+     */
+    public function deletePermanent(int $userId): array
+    {
+        $user = $this->users->findWithPlanById($userId);
+        if ($user === null) {
+            return ['ok' => false, 'message' => 'User tidak ditemukan.'];
+        }
+
+        $db = Database::connection();
+
+        try {
+            $db->beginTransaction();
+
+            $this->users->deleteCalculatorRecipeLibraryByUserId($userId);
+            $this->users->deleteMarketPricesByUserId($userId);
+            $this->users->deleteCalculationHistoriesByUserId($userId);
+            $this->users->deleteAdminSubscriptionActionsByUserId($userId);
+            $this->users->deleteReferralRewardsByUserIdOrReferralRelation($userId);
+            $this->users->deleteReferralsByUserId($userId);
+            $this->users->deleteSubscriptionLogsByUserId($userId);
+            $this->users->deleteSubscriptionsByUserId($userId);
+            $this->users->deleteById($userId);
+
+            $db->commit();
+        } catch (\Throwable) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+
+            return ['ok' => false, 'message' => 'Hapus akun permanen gagal diproses.'];
+        }
+
+        $auth = Session::get('auth');
+        $deletedSelf = is_array($auth) && (int) ($auth['user_id'] ?? 0) === $userId;
+
+        return [
+            'ok' => true,
+            'message' => 'Akun user berhasil dihapus permanen.',
+            'deleted_self' => $deletedSelf,
+        ];
+    }
+
     private function refreshAuthSessionIfNeeded(int $userId): void
     {
         $auth = Session::get('auth');
@@ -271,6 +315,7 @@ final class AdminUserManagementService
             'plan_code' => (string) ($fresh['plan_code'] ?? 'FREE'),
             'plan_name' => (string) ($fresh['plan_name'] ?? 'Free'),
             'plan_expired_at' => $fresh['plan_expired_at'] ?? null,
+            'session_token' => (string) ($auth['session_token'] ?? ''),
         ]);
     }
 }

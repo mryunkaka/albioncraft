@@ -8,19 +8,20 @@ use App\Repositories\PlanRepository;
 use App\Repositories\UserRepository;
 use App\Support\Database;
 use App\Support\Session;
-use RuntimeException;
 use Throwable;
 
 final class AuthService
 {
     private UserRepository $users;
     private PlanRepository $plans;
+    private AuthSessionService $authSessions;
 
     public function __construct()
     {
         $db = Database::connection();
         $this->users = new UserRepository($db);
         $this->plans = new PlanRepository($db);
+        $this->authSessions = new AuthSessionService();
     }
 
     /**
@@ -133,6 +134,7 @@ final class AuthService
         }
 
         $plan = $this->plans->findById((int) $user['plan_id']);
+        $sessionToken = $this->authSessions->issue((int) $user['id']);
 
         Session::regenerate();
         Session::put('auth', [
@@ -143,6 +145,7 @@ final class AuthService
             'plan_code' => (string) ($plan['code'] ?? 'FREE'),
             'plan_name' => (string) ($plan['name'] ?? 'Free'),
             'plan_expired_at' => $user['plan_expired_at'] ?? null,
+            'session_token' => $sessionToken,
         ]);
 
         return ['ok' => true, 'errors' => []];
@@ -150,6 +153,7 @@ final class AuthService
 
     public function logout(): void
     {
+        $this->authSessions->invalidateCurrent($this->user());
         Session::destroy();
         Session::start();
     }

@@ -49,7 +49,9 @@
     pinchStartDistance: 0,
     pinchStartScale: 1,
   };
-  const recipeItemSelect = document.getElementById("recipe-item-select");
+  const recipeItemHiddenInput = document.getElementById("recipe-item-id");
+  const recipeItemInput = document.getElementById("recipe-item-search");
+  const recipeItemAutocomplete = document.getElementById("recipe-item-autocomplete");
   const recipeCitySelect = document.getElementById("recipe-city-select");
   const recipeAutoFillBtn = document.getElementById("recipe-autofill-btn");
   const bonusLocalCitySelect = document.getElementById("bonus-local-city-select");
@@ -73,6 +75,9 @@
   const helperAddMaterialBtn = document.getElementById("helper-add-material-btn");
   const helperClearBtn = document.getElementById("helper-clear-btn");
   const helperPushBtn = document.getElementById("helper-push-btn");
+  const helperToggleMountBtn = document.getElementById("helper-toggle-mount-btn");
+  const helperMountFields = document.getElementById("helper-mount-fields");
+  const helperMountCapacityInput = document.getElementById("helper-mount-capacity");
   const calculatorCitiesData = document.getElementById("calculator-cities-data");
   const cityOptions = parseCityOptions();
   const cityAliasMap = {
@@ -90,6 +95,10 @@
   let selectionHelperVisible = false;
   let lastRenderedAnalysisText = "";
   let csrfRefreshPromise = null;
+  let recipeAutocompleteItems = [];
+  let recipeAutocompleteActiveIndex = -1;
+  let recipeAutocompleteRequestToken = 0;
+  let recipeAutocompleteTimer = null;
 
   function upper(v) {
     return String(v || "").toUpperCase();
@@ -118,6 +127,46 @@
     const div = document.createElement("div");
     div.textContent = String(value == null ? "" : value);
     return div.innerHTML;
+  }
+
+  function stripTierEnchantmentLabel(value) {
+    return String(value || "")
+      .replace(/\s+T\d(?:\.\d)?\s*$/i, "")
+      .trim();
+  }
+
+  function parseDateValue(value) {
+    const raw = String(value || "").trim();
+    if (raw === "") return null;
+    const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function formatDateIndonesia(value) {
+    const date = parseDateValue(value);
+    if (!date) return "-";
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date);
+  }
+
+  function formatDateTimeIndonesia(value) {
+    const date = parseDateValue(value);
+    if (!date) return "-";
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
   }
 
   function addMaterialRow(initial) {
@@ -266,25 +315,27 @@
     const recommendations = data.recommendations || {};
     const cheapestMaterialMap = new Map();
     const cheapestMaterials = Array.isArray(recommendations.cheapest_material_cities) ? recommendations.cheapest_material_cities : [];
+    const selectedRecipeCityId = Number(cityBonus.city_id || 0);
 
     for (const row of cheapestMaterials) {
       cheapestMaterialMap.set(Number(row.item_id || 0), Number(row.city_id || 0));
     }
 
+    setFieldValue("recipe_city_id", selectedRecipeCityId > 0 ? selectedRecipeCityId : "");
     setFieldValue("item_id", item.id || "");
     setFieldValue("item_name", upper(item.name || ""));
     setFieldValue("item_value", item.item_value != null ? item.item_value : 0);
     setFieldValue("output_qty", item.output_qty != null ? item.output_qty : 1);
     setFieldValue("sell_price", item.sell_price != null ? item.sell_price : "");
     if (sellPriceCitySelect) {
-      const bestSellCityId = Number((((recommendations.best_sell_city || {}).city_id) || 0));
+      const bestSellCityId = Number(item.sell_price_city_id || (((recommendations.best_sell_city || {}).city_id) || 0));
       sellPriceCitySelect.value = bestSellCityId > 0 ? String(bestSellCityId) : "";
     }
     if (item.craft_fee != null) {
       setFieldValue("usage_fee", item.craft_fee);
     }
     if (craftFeeCitySelect) {
-      const bestCraftCityId = Number((((recommendations.best_craft_fee_city || {}).city_id) || 0));
+      const bestCraftCityId = Number(item.craft_fee_city_id || (((recommendations.recommended_craft_city || {}).city_id) || ((recommendations.best_craft_fee_city || {}).city_id) || 0));
       craftFeeCitySelect.value = bestCraftCityId > 0 ? String(bestCraftCityId) : "";
     }
     setFieldValue("bonus_local", cityBonus.bonus_percent != null ? cityBonus.bonus_percent : 0);
@@ -305,7 +356,9 @@
           qty_per_recipe: material.qty_per_recipe != null ? material.qty_per_recipe : 0,
           buy_price: material.buy_price != null ? material.buy_price : 0,
           return_type: material.return_type || "RETURN",
-          city_id: cheapestMaterialMap.get(Number(material.item_id || 0)) || "",
+          city_id: material.city_id != null && Number(material.city_id || 0) > 0
+            ? Number(material.city_id || 0)
+            : (cheapestMaterialMap.get(Number(material.item_id || 0)) || ""),
         });
       }
     }
@@ -361,26 +414,118 @@
   }
 
   async function loadRecipeItems(keyword) {
-    if (!recipeItemSelect) return;
+    if (!recipeItemAutocomplete) return [];
     const q = keyword ? `?q=${encodeURIComponent(keyword)}` : "";
     const json = await fetchJson(`/api/calculator/recipes/items${q}`);
-    const current = recipeItemSelect.value;
+    return Array.isArray(json.data) ? json.data : [];
+  }
 
-    recipeItemSelect.innerHTML = "";
-    recipeItemSelect.appendChild(new Option("Pilih item recipe database", ""));
+  function hideRecipeAutocomplete() {
+    if (!recipeItemAutocomplete) return;
+    recipeItemAutocomplete.hidden = true;
+    recipeItemAutocomplete.innerHTML = "";
+    recipeAutocompleteItems = [];
+    recipeAutocompleteActiveIndex = -1;
+  }
 
-    const rows = Array.isArray(json.data) ? json.data : [];
-    for (const row of rows) {
+  function selectRecipeAutocompleteItem(row) {
+    if (!row || typeof row !== "object") return;
+    if (recipeItemHiddenInput) {
+      recipeItemHiddenInput.value = String(row.id || "");
+    }
+    if (recipeItemInput) {
       const fallbackLabel = row.item_code
         ? `${row.name} (${row.item_code})`
         : String(row.name || "Untitled Recipe");
-      const label = String(row.label || fallbackLabel);
-      recipeItemSelect.appendChild(new Option(label, String(row.id)));
+      recipeItemInput.value = String(row.name || row.label || fallbackLabel);
+    }
+    hideRecipeAutocomplete();
+    scheduleSave();
+  }
+
+  function renderRecipeAutocomplete(rows, keyword) {
+    if (!recipeItemAutocomplete) return;
+    recipeAutocompleteItems = Array.isArray(rows) ? rows : [];
+    recipeAutocompleteActiveIndex = recipeAutocompleteItems.length > 0 ? 0 : -1;
+    recipeItemAutocomplete.innerHTML = "";
+
+    if (String(keyword || "").trim() === "") {
+      hideRecipeAutocomplete();
+      return;
     }
 
-    if (current) {
-      recipeItemSelect.value = current;
+    if (recipeAutocompleteItems.length === 0) {
+      recipeItemAutocomplete.hidden = false;
+      recipeItemAutocomplete.innerHTML = '<div class="recipe-autocomplete-empty">Tidak ada recipe item yang cocok.</div>';
+      return;
     }
+
+    recipeAutocompleteItems.forEach((row, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "recipe-autocomplete-card" + (index === recipeAutocompleteActiveIndex ? " is-active" : "");
+
+      const fallbackLabel = row.item_code
+        ? `${row.name} (${row.item_code})`
+        : String(row.name || "Untitled Recipe");
+      const sourceLabel = String(row.source || "").toUpperCase() === "SAVED" ? "Saved" : "Master";
+      const ownerLabel = row.owner_label ? String(row.owner_label) : "-";
+      const updatedLabel = formatDateTimeIndonesia(row.updated_at || row.created_at || "");
+
+      button.innerHTML = `
+        <div class="recipe-autocomplete-top">
+          <div class="recipe-autocomplete-name">${escapeHtml(String(row.name || row.label || fallbackLabel))}</div>
+          <div class="recipe-autocomplete-badge">${escapeHtml(sourceLabel)}</div>
+        </div>
+        <div class="recipe-autocomplete-meta">
+          <span>Kode: ${escapeHtml(String(row.item_code || "-"))}</span>
+          <span>Pemilik: ${escapeHtml(ownerLabel)}</span>
+          <span>Update: ${escapeHtml(updatedLabel)}</span>
+        </div>
+      `;
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        selectRecipeAutocompleteItem(row);
+      });
+      recipeItemAutocomplete.appendChild(button);
+    });
+
+    recipeItemAutocomplete.hidden = false;
+  }
+
+  function moveRecipeAutocompleteActive(step) {
+    if (!recipeItemAutocomplete || recipeAutocompleteItems.length === 0) return;
+    recipeAutocompleteActiveIndex += step;
+    if (recipeAutocompleteActiveIndex < 0) recipeAutocompleteActiveIndex = recipeAutocompleteItems.length - 1;
+    if (recipeAutocompleteActiveIndex >= recipeAutocompleteItems.length) recipeAutocompleteActiveIndex = 0;
+    Array.from(recipeItemAutocomplete.querySelectorAll(".recipe-autocomplete-card")).forEach((node, index) => {
+      node.classList.toggle("is-active", index === recipeAutocompleteActiveIndex);
+      if (index === recipeAutocompleteActiveIndex) {
+        node.scrollIntoView({ block: "nearest" });
+      }
+    });
+  }
+
+  function triggerRecipeAutocompleteSearch(keyword) {
+    if (!recipeItemInput) return;
+    if (recipeAutocompleteTimer) window.clearTimeout(recipeAutocompleteTimer);
+    recipeAutocompleteTimer = window.setTimeout(async () => {
+      const activeToken = ++recipeAutocompleteRequestToken;
+      const searchKeyword = String(keyword || "").trim();
+      if (searchKeyword.length < 1) {
+        hideRecipeAutocomplete();
+        return;
+      }
+
+      try {
+        const rows = await loadRecipeItems(searchKeyword);
+        if (activeToken !== recipeAutocompleteRequestToken) return;
+        renderRecipeAutocomplete(rows, searchKeyword);
+      } catch (_) {
+        if (activeToken !== recipeAutocompleteRequestToken) return;
+        renderRecipeAutocomplete([], searchKeyword);
+      }
+    }, 220);
   }
 
   function setFeedback(msg, type) {
@@ -471,8 +616,10 @@
     return {
       itemName: "",
       itemValue: "",
+      mountEnabled: false,
+      mountCapacity: "",
       materials: [
-        { name: "", itemValue: "" },
+        { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" },
       ],
       rows: [
         createSelectionHelperRow("", "", "", "", [""]),
@@ -492,12 +639,15 @@
     }
 
     if (!Array.isArray(selectionHelperState.materials) || selectionHelperState.materials.length === 0) {
-      selectionHelperState.materials = [{ name: "" }];
+      selectionHelperState.materials = [{ name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" }];
     }
 
     selectionHelperState.materials = selectionHelperState.materials.map((material) => ({
       name: upper((material && material.name) || ""),
       itemValue: material && material.itemValue != null ? String(material.itemValue) : "",
+      recipeQty: material && material.recipeQty != null ? String(material.recipeQty) : "",
+      weight: material && material.weight != null ? String(material.weight) : "",
+      returnType: upper(material && material.returnType ? String(material.returnType) : "RETURN") === "NON_RETURN" ? "NON_RETURN" : "RETURN",
     }));
 
     if (!Array.isArray(selectionHelperState.rows) || selectionHelperState.rows.length === 0) {
@@ -520,6 +670,8 @@
 
     selectionHelperState.itemName = upper(selectionHelperState.itemName || "");
     selectionHelperState.itemValue = selectionHelperState.itemValue == null ? "" : String(selectionHelperState.itemValue);
+    selectionHelperState.mountEnabled = !!selectionHelperState.mountEnabled;
+    selectionHelperState.mountCapacity = selectionHelperState.mountCapacity == null ? "" : String(selectionHelperState.mountCapacity);
   }
 
   function cityLookupKeysForValue(value) {
@@ -581,12 +733,65 @@
     return name !== "" ? name : `Material ${index + 1}`;
   }
 
-  function buildHelperCityOptionsHtml(selectedValue) {
+  function getSelectionHelperOutputQtyPerCraft() {
+    const outputQtyField = form.querySelector('[name="output_qty"]');
+    const outputQty = Number((outputQtyField && outputQtyField.value) || "1");
+    return Number.isFinite(outputQty) && outputQty > 0 ? outputQty : 1;
+  }
+
+  function computeMountHelperTargetOutput(activeMaterialEntries) {
+    ensureSelectionHelperState();
+    if (!selectionHelperState.mountEnabled) {
+      return null;
+    }
+
+    const mountCapacity = numberOrNull(selectionHelperState.mountCapacity);
+    if (mountCapacity == null || mountCapacity <= 0) {
+      return null;
+    }
+
+    let totalWeightPerCraft = 0;
+    for (const material of activeMaterialEntries) {
+      const recipeQty = numberOrNull(material.recipeQty);
+      const weight = numberOrNull(material.weight);
+      if (recipeQty == null || recipeQty <= 0 || weight == null || weight <= 0) {
+        continue;
+      }
+      totalWeightPerCraft += recipeQty * weight;
+    }
+
+    if (!(totalWeightPerCraft > 0)) {
+      return null;
+    }
+
+    const maxCrafts = Math.floor(mountCapacity / totalWeightPerCraft);
+    const outputQtyPerCraft = getSelectionHelperOutputQtyPerCraft();
+
+    return {
+      mountCapacity,
+      totalWeightPerCraft,
+      maxCrafts: Math.max(0, maxCrafts),
+      targetOutputQty: Math.max(0, maxCrafts) * outputQtyPerCraft,
+    };
+  }
+
+  function buildHelperCityOptionsHtml(selectedValue, rowIndex) {
     const selectedOption = findCityOptionByReference(selectedValue);
     const currentValue = selectedOption ? String(selectedOption.id || "") : String(selectedValue == null ? "" : selectedValue);
+    const usedCityIds = new Set();
+    selectionHelperState.rows.forEach((row, index) => {
+      if (index === rowIndex) return;
+      const rowCity = findCityOptionByReference(row && row.city);
+      if (rowCity && rowCity.id != null && String(rowCity.id) !== "") {
+        usedCityIds.add(String(rowCity.id));
+      }
+    });
     const options = ['<option value="">Pilih kota</option>'];
     for (const option of cityOptions) {
       const value = String(option.id || "");
+      if (value !== currentValue && usedCityIds.has(value)) {
+        continue;
+      }
       const selected = value === currentValue ? " selected" : "";
       options.push(`<option value="${escapeHtml(value)}"${selected}>${escapeHtml(String(option.name || ""))}</option>`);
     }
@@ -677,6 +882,15 @@
       if (!selectionHelperSummary) return;
 
     const picks = buildSelectionHelperPicks();
+    const activeMaterialEntries = selectionHelperState.materials
+      .map((material, index) => ({
+        index,
+        name: upper((material && material.name) || ""),
+        recipeQty: String((material && material.recipeQty) || "").trim(),
+        weight: String((material && material.weight) || "").trim(),
+      }))
+      .filter((material) => material.name !== "");
+    const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries);
     const lines = [];
 
     if (picks.craft) {
@@ -694,6 +908,10 @@
       lines.push(`${getSelectionHelperMaterialLabel(index)} termurah: ${getHelperCityLabel(pick)} @ ${fmtMoney(Number(pick.value || 0))}`);
     });
 
+    if (mountComputation) {
+      lines.push(`Tunggangan: kapasitas ${mountComputation.mountCapacity} | bobot/recipe ${mountComputation.totalWeightPerCraft.toFixed(2)} | max craft ${mountComputation.maxCrafts} | target output aman ${mountComputation.targetOutputQty}`);
+    }
+
     if (lines.length === 0) {
       selectionHelperSummary.hidden = true;
       selectionHelperSummary.textContent = "";
@@ -708,15 +926,26 @@
     if (!selectionHelperNames) return;
     selectionHelperNames.innerHTML = "";
 
+    if (helperToggleMountBtn) {
+      helperToggleMountBtn.textContent = selectionHelperState.mountEnabled ? "Hapus Tunggangan" : "Tunggangan";
+    }
+    if (helperMountFields) {
+      helperMountFields.hidden = !selectionHelperState.mountEnabled;
+    }
+    if (helperMountCapacityInput) {
+      helperMountCapacityInput.value = String(selectionHelperState.mountCapacity || "");
+    }
+
     const itemField = document.createElement("div");
     itemField.className = "field";
     itemField.innerHTML = `
       <span class="field-label selection-helper-name-label">
         <span class="selection-helper-name-text">Nama Item Craft</span>
       </span>
-      <div class="selection-helper-dual-input">
-        <input class="input" type="text" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T3.0 atau BELATI PENGEMBARA T3.3">
+      <div class="selection-helper-item-grid">
+        <input class="input" type="text" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T4.1">
         <input class="input selection-helper-item-value-input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Item value">
+        <button class="button button-ghost selection-helper-copy-btn" type="button" data-helper-copy="item">Copy Teks</button>
       </div>
     `;
     const itemInput = itemField.querySelector('[data-helper-name="item"]');
@@ -739,9 +968,16 @@
             <button class="button button-ghost selection-helper-remove-material" type="button" data-helper-remove-material="${index}">Hapus Material</button>
           </span>
         </span>
-        <div class="selection-helper-dual-input">
-          <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Isi nama material ${index + 1}">
+        <div class="selection-helper-material-grid">
+          <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Contoh: CRENELLATED BURDOCK T4.1">
           <input class="input selection-helper-material-value-input" type="number" step="0.01" min="0" data-helper-name="material_item_value" data-material-index="${index}" placeholder="Item value">
+          <input class="input" type="number" step="0.0001" min="0" data-helper-name="material_recipe_qty" data-material-index="${index}" placeholder="Recipe/Qty">
+          <input class="input" type="number" step="0.01" min="0" data-helper-name="material_weight" data-material-index="${index}" placeholder="Bobot">
+          <select class="select" data-helper-name="material_return_type" data-material-index="${index}">
+            <option value="RETURN">RETURN</option>
+            <option value="NON_RETURN">NON_RETURN</option>
+          </select>
+          <button class="button button-ghost selection-helper-copy-btn" type="button" data-helper-copy="material" data-material-index="${index}">Copy Teks</button>
         </div>
       `;
       const input = field.querySelector('[data-helper-name="material"]');
@@ -751,6 +987,18 @@
       const itemValueInput = field.querySelector('[data-helper-name="material_item_value"]');
       if (itemValueInput) {
         itemValueInput.value = String((material && material.itemValue) || "");
+      }
+      const recipeQtyInput = field.querySelector('[data-helper-name="material_recipe_qty"]');
+      if (recipeQtyInput) {
+        recipeQtyInput.value = String((material && material.recipeQty) || "");
+      }
+      const weightInput = field.querySelector('[data-helper-name="material_weight"]');
+      if (weightInput) {
+        weightInput.value = String((material && material.weight) || "");
+      }
+      const returnTypeInput = field.querySelector('[data-helper-name="material_return_type"]');
+      if (returnTypeInput) {
+        returnTypeInput.value = String((material && material.returnType) || "RETURN");
       }
       selectionHelperNames.appendChild(field);
     });
@@ -764,7 +1012,7 @@
       "<th>Kota</th>",
       "<th class=\"right\">Craft Fee</th>",
       "<th class=\"right\">Bonus</th>",
-      `<th class="right">${escapeHtml(String(selectionHelperState.itemName || "").trim() !== "" ? `Harga ${selectionHelperState.itemName}` : "Harga Item Craft")}</th>`,
+      `<th class="right">Item Craft</th>`,
     ];
 
     selectionHelperState.materials.forEach((_, index) => {
@@ -783,6 +1031,7 @@
             type="number"
             step="0.01"
             min="0"
+            placeholder="${escapeHtml(getSelectionHelperMaterialLabel(materialIndex))} di kota ini"
             value="${escapeHtml(toInputValue(Array.isArray(row.materials) ? row.materials[materialIndex] : ""))}"
             data-helper-row-index="${rowIndex}"
             data-helper-field="material"
@@ -799,7 +1048,7 @@
               data-helper-row-index="${rowIndex}"
               data-helper-field="city"
             >
-              ${buildHelperCityOptionsHtml(row.city)}
+              ${buildHelperCityOptionsHtml(row.city, rowIndex)}
             </select>
           </td>
           <td>
@@ -808,6 +1057,7 @@
               type="number"
               step="0.01"
               min="0"
+              placeholder="Biaya craft di kota ini"
               value="${escapeHtml(toInputValue(row.craftFee))}"
               data-helper-row-index="${rowIndex}"
               data-helper-field="craftFee"
@@ -819,6 +1069,7 @@
               type="number"
               step="0.01"
               min="0"
+              placeholder="Bonus lokal kota ini"
               value="${escapeHtml(toInputValue(row.bonus))}"
               data-helper-row-index="${rowIndex}"
               data-helper-field="bonus"
@@ -830,6 +1081,7 @@
               type="number"
               step="0.01"
               min="0"
+              placeholder="Harga jual item craft"
               value="${escapeHtml(toInputValue(row.itemPrice))}"
               data-helper-row-index="${rowIndex}"
               data-helper-field="itemPrice"
@@ -857,7 +1109,7 @@
     if (index < 0 || index >= selectionHelperState.materials.length) return;
 
     if (selectionHelperState.materials.length <= 1) {
-      selectionHelperState.materials = [{ name: "" }];
+      selectionHelperState.materials = [{ name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" }];
       selectionHelperState.rows.forEach((row) => {
         row.materials = [""];
       });
@@ -901,9 +1153,14 @@
       selectionHelperState.materials = materialRows.map((row) => {
         const field = row.querySelector(".material-name");
         const itemValueField = row.querySelector(".material-item-value");
+        const qtyField = row.querySelector(".material-qty");
+        const returnTypeField = row.querySelector(".material-type");
         return {
           name: upper((field && field.value) || ""),
           itemValue: String((itemValueField && itemValueField.value) || "").trim(),
+          recipeQty: String((qtyField && qtyField.value) || "").trim(),
+          weight: "",
+          returnType: String((returnTypeField && returnTypeField.value) || "RETURN"),
         };
       });
       ensureSelectionHelperState();
@@ -1204,6 +1461,9 @@
         index,
         name: upper((material && material.name) || ""),
         itemValue: String((material && material.itemValue) || "").trim(),
+        recipeQty: String((material && material.recipeQty) || "").trim(),
+        weight: String((material && material.weight) || "").trim(),
+        returnType: String((material && material.returnType) || "RETURN"),
       }))
       .filter((material) => material.name !== "");
 
@@ -1221,8 +1481,11 @@
       const helperMaterials = activeMaterialEntries.map((material) => ({
         name: material.name,
         item_value: material.itemValue,
+        qty_per_recipe: material.recipeQty,
+        return_type: material.returnType,
       }));
       const helperMaterialPicks = activeMaterialEntries.map((material) => picks.materials[material.index] || null);
+      const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries);
       const helperSaveRows = buildSelectionHelperSaveRows(activeMaterialEntries);
       const persistResult = await persistSelectionHelperMarketData({
         itemName,
@@ -1250,7 +1513,7 @@
     }
     setFieldValue("item_value", itemValue);
     setFieldValue("output_qty", "");
-    setFieldValue("target_output_qty", "");
+    setFieldValue("target_output_qty", mountComputation ? mountComputation.targetOutputQty : "");
 
     clearMaterials();
     const materialRows = helperMaterials.map((material, index) => addMaterialRow({
@@ -1259,10 +1522,10 @@
       item_value: persistResult.materialMatches[index] && persistResult.materialMatches[index].item_value != null
         ? persistResult.materialMatches[index].item_value
         : material.item_value,
-      qty_per_recipe: "",
+      qty_per_recipe: material.qty_per_recipe || "",
       buy_price: helperMaterialPicks[index] ? helperMaterialPicks[index].value : "",
-      return_type: "",
-      allow_blank_return: true,
+      return_type: material.return_type || "RETURN",
+      allow_blank_return: false,
       city_id: helperMaterialPicks[index] && helperMaterialPicks[index].cityOption ? helperMaterialPicks[index].cityOption.id : "",
     }));
     reindexMaterialNames();
@@ -1279,6 +1542,8 @@
       setFeedback(feedbackLines.join(" "));
     } else if (persistResult.messages.length > 0) {
       setFeedback(persistResult.messages.join(" "));
+    } else if (mountComputation) {
+      setFeedback(`Target output aman diset ke ${mountComputation.targetOutputQty} berdasarkan muatan tunggangan ${mountComputation.mountCapacity}.`, "success");
     } else {
       setFeedback("");
     }
@@ -1965,17 +2230,74 @@
         const index = Number(target.dataset.materialIndex || "-1");
         if (index < 0) return;
         if (!selectionHelperState.materials[index]) {
-          selectionHelperState.materials[index] = { name: "", itemValue: "" };
+          selectionHelperState.materials[index] = { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" };
         }
         selectionHelperState.materials[index].itemValue = target.value;
         selectionHelperHasDraft = true;
         scheduleSave();
+        return;
       }
+
+      if (helperNameType === "material_recipe_qty") {
+        const index = Number(target.dataset.materialIndex || "-1");
+        if (index < 0) return;
+        if (!selectionHelperState.materials[index]) {
+          selectionHelperState.materials[index] = { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" };
+        }
+        selectionHelperState.materials[index].recipeQty = target.value;
+        selectionHelperHasDraft = true;
+        scheduleSave();
+        renderSelectionHelperSummary();
+        return;
+      }
+
+      if (helperNameType === "material_weight") {
+        const index = Number(target.dataset.materialIndex || "-1");
+        if (index < 0) return;
+        if (!selectionHelperState.materials[index]) {
+          selectionHelperState.materials[index] = { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" };
+        }
+        selectionHelperState.materials[index].weight = target.value;
+        selectionHelperHasDraft = true;
+        scheduleSave();
+        renderSelectionHelperSummary();
+      }
+    });
+
+    selectionHelperNames.addEventListener("change", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLSelectElement)) return;
+      const helperNameType = target.dataset.helperName || "";
+      if (helperNameType !== "material_return_type") return;
+
+      const index = Number(target.dataset.materialIndex || "-1");
+      if (index < 0) return;
+      if (!selectionHelperState.materials[index]) {
+        selectionHelperState.materials[index] = { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" };
+      }
+      selectionHelperState.materials[index].returnType = String(target.value || "RETURN");
+      selectionHelperHasDraft = true;
+      scheduleSave();
     });
 
     selectionHelperNames.addEventListener("click", (ev) => {
       const target = ev.target;
       if (!(target instanceof HTMLElement)) return;
+
+      const copyBtn = target.closest("[data-helper-copy]");
+      if (copyBtn) {
+        const copyType = String(copyBtn.getAttribute("data-helper-copy") || "");
+        if (copyType === "item") {
+          copyTextToClipboard(stripTierEnchantmentLabel(selectionHelperState.itemName || ""));
+          return;
+        }
+        if (copyType === "material") {
+          const materialIndex = Number(copyBtn.getAttribute("data-material-index") || "-1");
+          const material = selectionHelperState.materials[materialIndex] || null;
+          copyTextToClipboard(stripTierEnchantmentLabel(material && material.name ? String(material.name) : ""));
+          return;
+        }
+      }
 
       const removeMaterialBtn = target.closest("[data-helper-remove-material]");
       if (!removeMaterialBtn) return;
@@ -2024,6 +2346,7 @@
 
       selectionHelperState.rows[rowIndex].city = target.value;
       selectionHelperHasDraft = true;
+      renderSelectionHelperTable();
       scheduleSave();
       renderSelectionHelperSummary();
     });
@@ -2065,7 +2388,7 @@
   if (helperAddMaterialBtn) {
     helperAddMaterialBtn.addEventListener("click", () => {
       ensureSelectionHelperState();
-      selectionHelperState.materials.push({ name: "", itemValue: "" });
+      selectionHelperState.materials.push({ name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" });
       selectionHelperState.rows.forEach((row) => {
         if (!Array.isArray(row.materials)) {
           row.materials = [];
@@ -2083,6 +2406,29 @@
       resetSelectionHelperState();
       setFeedback("");
       scheduleSave();
+    });
+  }
+
+  if (helperToggleMountBtn) {
+    helperToggleMountBtn.addEventListener("click", () => {
+      ensureSelectionHelperState();
+      selectionHelperState.mountEnabled = !selectionHelperState.mountEnabled;
+      if (!selectionHelperState.mountEnabled) {
+        selectionHelperState.mountCapacity = "";
+      }
+      selectionHelperHasDraft = true;
+      renderSelectionHelper();
+      scheduleSave();
+    });
+  }
+
+  if (helperMountCapacityInput) {
+    helperMountCapacityInput.addEventListener("input", () => {
+      ensureSelectionHelperState();
+      selectionHelperState.mountCapacity = helperMountCapacityInput.value;
+      selectionHelperHasDraft = true;
+      scheduleSave();
+      renderSelectionHelperSummary();
     });
   }
 
@@ -2274,16 +2620,57 @@
     });
   }
 
-  if (recipeItemSelect) {
-    loadRecipeItems("").catch(() => {});
+  if (recipeItemInput) {
+    recipeItemInput.addEventListener("input", () => {
+      if (recipeItemHiddenInput) {
+        recipeItemHiddenInput.value = "";
+      }
+      triggerRecipeAutocompleteSearch(recipeItemInput.value);
+      scheduleSave();
+    });
+
+    recipeItemInput.addEventListener("focus", () => {
+      const keyword = String(recipeItemInput.value || "").trim();
+      if (keyword !== "") {
+        triggerRecipeAutocompleteSearch(keyword);
+      }
+    });
+
+    recipeItemInput.addEventListener("keydown", (event) => {
+      if (recipeItemAutocomplete && !recipeItemAutocomplete.hidden) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          moveRecipeAutocompleteActive(1);
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          moveRecipeAutocompleteActive(-1);
+          return;
+        }
+        if (event.key === "Enter" && recipeAutocompleteActiveIndex >= 0) {
+          event.preventDefault();
+          selectRecipeAutocompleteItem(recipeAutocompleteItems[recipeAutocompleteActiveIndex] || null);
+          return;
+        }
+        if (event.key === "Escape") {
+          hideRecipeAutocomplete();
+        }
+      }
+    });
+
+    recipeItemInput.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        hideRecipeAutocomplete();
+      }, 120);
+    });
   }
 
   if (recipeAutoFillBtn) {
     recipeAutoFillBtn.addEventListener("click", async () => {
       setFeedback("");
 
-      const entryId = recipeItemSelect ? String(recipeItemSelect.value || "") : "";
-      const cityId = recipeCitySelect ? Number(recipeCitySelect.value || "0") : 0;
+      const entryId = recipeItemHiddenInput ? String(recipeItemHiddenInput.value || "") : "";
       if (!entryId) {
         setFeedback("Pilih item recipe database terlebih dahulu.");
         return;
@@ -2292,7 +2679,6 @@
       recipeAutoFillBtn.disabled = true;
       try {
         const qs = new URLSearchParams({ entry_id: entryId });
-        if (cityId > 0) qs.set("city_id", String(cityId));
         const json = await fetchJson(`/api/calculator/recipes/detail?${qs.toString()}`);
         populateRecipeDetail(json.data || null);
       } catch (err) {

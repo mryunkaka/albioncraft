@@ -6,9 +6,19 @@ namespace App\Support;
 
 final class Session
 {
+    private const COOKIE_LIFETIME = 315360000;
+
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            ini_set('session.gc_maxlifetime', (string) self::COOKIE_LIFETIME);
+            session_set_cookie_params([
+                'lifetime' => self::COOKIE_LIFETIME,
+                'path' => '/',
+                'secure' => (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
             session_start();
         }
     }
@@ -82,4 +92,3 @@ final class Session
         return is_string($value) ? $value : null;
     }
 }
-

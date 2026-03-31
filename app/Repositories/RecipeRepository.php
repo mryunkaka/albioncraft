@@ -23,6 +23,7 @@ final class RecipeRepository
                     i.name,
                     i.item_value,
                     i.default_output_qty,
+                    i.updated_at,
                     ic.id AS category_id,
                     ic.code AS category_code,
                     ic.name AS category_name

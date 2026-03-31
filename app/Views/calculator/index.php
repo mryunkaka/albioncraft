@@ -347,9 +347,9 @@
       margin-bottom: 1rem;
     }
 
-    @media (min-width: 768px) {
+    @media (min-width: 1440px) {
       .selection-helper-meta {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -359,6 +359,7 @@
       justify-content: space-between;
       gap: .5rem;
       min-height: 2.75rem;
+      flex-wrap: wrap;
     }
 
     .selection-helper-name-text {
@@ -428,6 +429,94 @@
       min-width: 0;
     }
 
+    .selection-helper-config {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-bottom: 1rem;
+      padding: .9rem 1rem;
+      border: 1px solid #dbeafe;
+      border-radius: 1rem;
+      background: rgba(248, 250, 252, .88);
+    }
+
+    .selection-helper-mount-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: end;
+    }
+
+    .selection-helper-mount-fields[hidden] {
+      display: none !important;
+    }
+
+    .selection-helper-mount-fields .field {
+      min-width: min(100%, 240px);
+      margin-bottom: 0;
+    }
+
+    .selection-helper-item-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: start;
+    }
+
+    .selection-helper-material-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: start;
+    }
+
+    .selection-helper-copy-btn {
+      white-space: nowrap;
+    }
+
+    .selection-helper-item-grid > [data-helper-name="item"] {
+      flex: 1 1 320px;
+      min-width: 220px;
+    }
+
+    .selection-helper-item-grid > [data-helper-name="item_value"] {
+      flex: 0 0 140px;
+      min-width: 120px;
+    }
+
+    .selection-helper-item-grid > .selection-helper-copy-btn {
+      flex: 0 0 auto;
+    }
+
+    .selection-helper-material-grid > [data-helper-name="material"] {
+      flex: 1 1 300px;
+      min-width: 220px;
+    }
+
+    .selection-helper-material-grid > [data-helper-name="material_item_value"] {
+      flex: 0 0 130px;
+      min-width: 110px;
+    }
+
+    .selection-helper-material-grid > [data-helper-name="material_recipe_qty"] {
+      flex: 0 0 110px;
+      min-width: 100px;
+    }
+
+    .selection-helper-material-grid > [data-helper-name="material_weight"] {
+      flex: 0 0 110px;
+      min-width: 100px;
+    }
+
+    .selection-helper-material-grid > [data-helper-name="material_return_type"] {
+      flex: 0 0 160px;
+      min-width: 140px;
+    }
+
+    .selection-helper-material-grid > .selection-helper-copy-btn {
+      flex: 0 0 auto;
+    }
+
     .selection-helper-remove-material {
       font-size: .75rem;
       line-height: 1rem;
@@ -437,6 +526,95 @@
     .selection-helper-remove-material-spacer {
       visibility: hidden;
       pointer-events: none;
+    }
+
+    .recipe-autocomplete-shell {
+      position: relative;
+    }
+
+    .recipe-autocomplete-list {
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + .35rem);
+      left: 0;
+      right: 0;
+      display: grid;
+      gap: .5rem;
+      max-height: 22rem;
+      overflow-y: auto;
+      padding: .6rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, .98);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, .16);
+    }
+
+    .recipe-autocomplete-list[hidden] {
+      display: none !important;
+    }
+
+    .recipe-autocomplete-card {
+      width: 100%;
+      display: grid;
+      gap: .3rem;
+      text-align: left;
+      padding: .8rem .9rem;
+      border: 1px solid #dbeafe;
+      border-radius: .85rem;
+      background: #f8fbff;
+      transition: border-color .2s, background-color .2s, transform .2s;
+    }
+
+    .recipe-autocomplete-card:hover,
+    .recipe-autocomplete-card.is-active {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      transform: translateY(-1px);
+    }
+
+    .recipe-autocomplete-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+    }
+
+    .recipe-autocomplete-name {
+      font-size: .92rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .recipe-autocomplete-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: .18rem .55rem;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      white-space: nowrap;
+    }
+
+    .recipe-autocomplete-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem .8rem;
+      font-size: .78rem;
+      color: #475569;
+    }
+
+    .recipe-autocomplete-empty {
+      padding: .8rem .9rem;
+      border: 1px dashed #bfdbfe;
+      border-radius: .85rem;
+      color: #64748b;
+      font-size: .82rem;
+      background: #f8fbff;
     }
 
     .manual-attention-wrap .field-label {
@@ -456,6 +634,12 @@
     }
 
     @media (max-width: 640px) {
+      .selection-helper-item-grid > *,
+      .selection-helper-material-grid > * {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
       .tooltip-popover {
         left: .75rem !important;
         right: .75rem !important;
@@ -484,17 +668,12 @@ $calculatorTooltips = [
   'recipe_item' => [
     'title' => 'Database Recipe Item',
     'body' => "Pilih item recipe dari database agar nama item, material, dan beberapa harga pendukung bisa terisi lebih cepat.\nCocok dipakai kalau item yang ingin dihitung sudah tersedia di library.",
-    'image' => '/assets/images/calculator-flow-overview.svg',
-  ],
-  'recipe_city' => [
-    'title' => 'Kota Bonus',
-    'body' => "Pilih kota bonus recipe bila item tersebut punya bonus crafting lokal.\nKota ini membantu auto fill mengambil konteks bonus yang tepat.",
-    'image' => '/assets/images/calculator-flow-overview.svg',
+    'image' => '',
   ],
   'recipe_autofill' => [
     'title' => 'Auto Fill',
-    'body' => "Setelah memilih item recipe dan kota bonus, tekan Load Recipe untuk mengisi field secara otomatis.\nKamu tetap bisa edit nilainya manual setelah itu.",
-    'image' => '/assets/images/calculator-flow-overview.svg',
+    'body' => "Setelah memilih item recipe, tekan Load Recipe untuk mengisi field secara otomatis.\nKota bonus local, craft price, market price, dan kota beli akan ikut dipilihkan otomatis bila data tersedia.",
+    'image' => '',
   ],
   'rounding_mode' => [
     'title' => 'Rounding Mode',
@@ -630,9 +809,18 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
   <div class="card-title-row">
     <div>
       <h2 class="card-title">Bantu Seleksi Item</h2>
-      <p class="selection-helper-note">Isi nama item, item value, nama material, dan item value material. Bandingkan data per kota, lalu tombol push akan memilih craft fee termurah, bonus tertinggi, harga item tertinggi, dan harga material termurah untuk tiap material.</p>
+      <p class="selection-helper-note">Isi nama item, item value, nama material, recipe/qty, bobot, dan return type. Bandingkan data per kota, lalu tombol push akan memilih harga terbaik dan menghitung target craft aman bila mode tunggangan aktif.</p>
     </div>
     <button class="button button-ghost" type="button" id="close-selection-helper-btn">Kembali ke Input</button>
+  </div>
+  <div class="selection-helper-config">
+    <button class="button button-secondary" type="button" id="helper-toggle-mount-btn">Tunggangan</button>
+    <div class="selection-helper-mount-fields" id="helper-mount-fields" hidden>
+      <label class="field">
+        <span class="field-label">Muatan Maks Tunggangan</span>
+        <input class="input" type="number" step="0.01" min="0" id="helper-mount-capacity" placeholder="Contoh: 1370">
+      </label>
+    </div>
   </div>
   <div id="selection-helper-names" class="selection-helper-meta"></div>
   <div class="table-wrap">
@@ -660,25 +848,19 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 
   <form id="calc-form" class="form">
     <input type="hidden" name="item_id" value="">
+    <input type="hidden" name="recipe_city_id" value="">
     <input type="hidden" name="_token" value="<?= htmlspecialchars((string) ($csrf_token ?? '')) ?>">
 
     <?php if ($canUseRecipeDatabase): ?>
       <div class="card-subtitle">Recipe Database & Rekomendasi Kota</div>
       <div class="grid">
-        <label class="field xl:col-span-2">
+        <label class="field xl:col-span-3">
           <?php renderCalculatorLabel('Database Recipe Item', 'recipe_item', $calculatorTooltips); ?>
-          <select class="select" id="recipe-item-select" name="recipe_item_id">
-            <option value="">Pilih item recipe database</option>
-          </select>
-        </label>
-        <label class="field">
-          <?php renderCalculatorLabel('Kota Bonus', 'recipe_city', $calculatorTooltips); ?>
-          <select class="select" id="recipe-city-select" name="recipe_city_id">
-            <option value="">Tanpa bonus kota</option>
-            <?php foreach (($recipe_cities ?? []) as $city): ?>
-              <option value="<?= (int) ($city['id'] ?? 0) ?>"><?= htmlspecialchars((string) ($city['name'] ?? '')) ?></option>
-            <?php endforeach; ?>
-          </select>
+          <input type="hidden" id="recipe-item-id" name="recipe_item_id" value="">
+          <div class="recipe-autocomplete-shell">
+            <input class="input" id="recipe-item-search" name="recipe_item_label" type="text" value="" placeholder="Ketik nama item recipe..." autocomplete="off" spellcheck="false">
+            <div class="recipe-autocomplete-list" id="recipe-item-autocomplete" hidden></div>
+          </div>
         </label>
         <div class="field justify-end">
           <?php renderCalculatorLabel('Auto Fill', 'recipe_autofill', $calculatorTooltips); ?>
@@ -700,7 +882,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
     <div class="calculator-inline-grid cols-4 cols-4-item-main">
       <label class="field">
         <?php renderCalculatorLabel('Nama Item', 'item_name', $calculatorTooltips); ?>
-        <input class="input" name="item_name" type="text" value="" placeholder="Contoh: BELATI PENGEMBARA T3.0 atau BELATI PENGEMBARA T3.3" autocomplete="off" required>
+        <input class="input" name="item_name" type="text" value="" placeholder="Contoh: BELATI PENGEMBARA T4.1" autocomplete="off" required>
       </label>
       <label class="field">
         <?php renderCalculatorLabel('Item Value', 'item_value', $calculatorTooltips); ?>
@@ -812,11 +994,6 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
     </div>
     <div class="actions">
       <button class="button button-secondary" type="button" id="add-material">Tambah Material</button>
-      <?php if ($canUseRecipeDatabase): ?>
-        <button class="button button-ghost" type="button" id="save-craft-fee-btn">Simpan Craft Price ke DB</button>
-        <button class="button button-ghost" type="button" id="save-sell-price-btn">Simpan Harga Jual ke DB</button>
-        <button class="button button-ghost" type="button" id="save-material-prices-btn">Simpan Harga Material ke DB</button>
-      <?php endif; ?>
       <button class="button button-ghost" type="button" id="clear-local">Clear</button>
       <button class="button button-primary" type="submit" id="calc-submit">Hitung</button>
     </div>
@@ -993,5 +1170,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 <script id="calculator-tooltip-map" type="application/json">
   <?= json_encode($calculatorTooltips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 </script>
-<script src="/assets/calculator.js?v=20260330-01"></script>
+<script src="/assets/calculator.js?v=20260331-04"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

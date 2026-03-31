@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use App\Services\AuthSessionService;
 use App\Services\SubscriptionService;
 use App\Support\Request;
 use App\Support\Response;
@@ -14,7 +15,9 @@ final class SubscriptionMiddleware implements MiddlewareInterface
     public function handle(Request $request): bool
     {
         $auth = Session::get('auth');
-        if (! is_array($auth) || ! isset($auth['user_id'])) {
+        $authSessions = new AuthSessionService();
+        if (! is_array($auth) || ! isset($auth['user_id']) || ! $authSessions->isValid($auth)) {
+            $authSessions->destroyInvalidSession();
             if ($request->isAjax()) {
                 Response::json([
                     'success' => false,
@@ -61,6 +64,7 @@ final class SubscriptionMiddleware implements MiddlewareInterface
             'plan_code' => (string) ($user['plan_code'] ?? 'FREE'),
             'plan_name' => (string) ($user['plan_name'] ?? 'Free'),
             'plan_expired_at' => $user['plan_expired_at'] ?? null,
+            'session_token' => (string) ($auth['session_token'] ?? ''),
         ]);
 
         return true;

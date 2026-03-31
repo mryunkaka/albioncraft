@@ -183,5 +183,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
       canViewAllPrices: <?= json_encode((bool) ($can_view_all_prices ?? false)) ?>
     };
   </script>
-  <script src="/assets/price-data.js?v=20260329-01"></script>
+  <script src="/assets/price-data.js?v=20260331-01"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

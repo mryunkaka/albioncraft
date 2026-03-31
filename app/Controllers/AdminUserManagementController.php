@@ -82,6 +82,24 @@ final class AdminUserManagementController
         $this->flashAndRedirect($result['ok'], $result['message'], $userId);
     }
 
+    public function deletePermanent(Request $request): void
+    {
+        $userId = (int) $request->input('user_id', 0);
+
+        $service = new AdminUserManagementService();
+        $result = $service->deletePermanent($userId);
+
+        Session::flash($result['ok'] ? 'success' : 'error', $result['message']);
+
+        if (($result['deleted_self'] ?? false) === true) {
+            Session::destroy();
+            Response::redirect('/login');
+            return;
+        }
+
+        Response::redirect('/admin/users');
+    }
+
     private function flashAndRedirect(bool $ok, string $message, int $userId): void
     {
         Session::flash($ok ? 'success' : 'error', $message);

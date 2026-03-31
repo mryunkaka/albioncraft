@@ -10,6 +10,7 @@
 $auth = is_array($user ?? null) ? $user : null;
 $header_title = 'Albion Crafting Profit Calculator';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
 ?>
       <section class="page-header">
         <h1 class="page-title">Dashboard</h1>
@@ -47,7 +48,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
           <div class="widget-title">Subscription</div>
           <div class="widget-value"><?= htmlspecialchars((string) ($user['plan_name'] ?? 'Free')) ?></div>
           <div class="widget-muted">
-            Expired at: <?= htmlspecialchars((string) (($user['plan_expired_at'] ?? null) ?: '-')) ?>
+            Expired at: <?= htmlspecialchars($fmtWib($user['plan_expired_at'] ?? null)) ?>
           </div>
         </article>
         <article class="widget">
@@ -91,7 +92,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
             <article class="widget">
               <div class="widget-title">Item</div>
               <div class="widget-value"><?= htmlspecialchars((string) ($latest['item_name'] ?? '-')) ?></div>
-              <div class="widget-muted"><?= htmlspecialchars((string) ($latest['created_at'] ?? '-')) ?></div>
+              <div class="widget-muted"><?= htmlspecialchars($fmtWib($latest['created_at'] ?? null)) ?></div>
             </article>
             <article class="widget">
               <div class="widget-title">Output</div>
@@ -142,7 +143,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
                 $profitClass = $profit >= 0 ? 'text-emerald-700' : 'text-rose-700';
                 ?>
                 <tr>
-                  <td><?= htmlspecialchars((string) ($row['created_at'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($row['created_at'] ?? null)) ?></td>
                   <td><?= htmlspecialchars((string) ($row['item_name'] ?? '-')) ?></td>
                   <td><?= htmlspecialchars((string) ($row['plan_code'] ?? '-')) ?></td>
                   <td><?= htmlspecialchars((string) ($row['calculation_mode'] ?? '-')) ?></td>

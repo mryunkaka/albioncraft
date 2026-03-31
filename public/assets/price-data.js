@@ -34,6 +34,28 @@
     }).format(Math.round(value));
   }
 
+  function parseDateValue(value) {
+    const raw = String(value || "").trim();
+    if (raw === "") return null;
+    const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function formatDateTimeWib(value) {
+    const date = parseDateValue(value);
+    if (!date) return "-";
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date) + " WIB";
+  }
+
   function buildQuery() {
     const params = new URLSearchParams();
     const q = qInput ? qInput.value.trim() : "";
@@ -66,8 +88,8 @@
           <td>${escapeHtml(row.city_name || "-")}</td>
           <td>${escapeHtml(row.price_type)}</td>
           <td class="right">${escapeHtml(fmtMoney(row.price_value))}</td>
-          <td>${escapeHtml(row.observed_at || "-")}</td>
-          <td>${escapeHtml(row.updated_at || "-")}</td>
+          <td>${escapeHtml(formatDateTimeWib(row.observed_at || ""))}</td>
+          <td>${escapeHtml(formatDateTimeWib(row.updated_at || ""))}</td>
           <td>${escapeHtml(row.notes || "-")}</td>
           <td>
             ${row.can_manage
@@ -115,10 +137,18 @@
   }
 
   function toDatetimeLocal(dbValue) {
-    if (!dbValue) return "";
-    const s = String(dbValue).trim();
-    if (s.length < 16) return "";
-    return s.slice(0, 16).replace(" ", "T");
+    const date = parseDateValue(dbValue);
+    if (!date) return "";
+    const wib = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+    return wib.replace(" ", "T");
   }
 
   function fillFormForEdit(row) {

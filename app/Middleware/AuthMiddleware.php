@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use App\Services\AuthSessionService;
 use App\Support\Request;
 use App\Support\Response;
 use App\Support\Session;
@@ -12,9 +13,13 @@ final class AuthMiddleware implements MiddlewareInterface
 {
     public function handle(Request $request): bool
     {
-        if (Session::has('auth')) {
+        $auth = Session::get('auth');
+        $authSessions = new AuthSessionService();
+        if (is_array($auth) && $authSessions->isValid($auth)) {
             return true;
         }
+
+        $authSessions->destroyInvalidSession();
 
         if ($request->isAjax()) {
             Response::json([

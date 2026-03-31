@@ -9,6 +9,7 @@
 <?php
 $header_title = 'Albion Crafting Profit Calculator';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
 ?>
       <section class="page-header">
         <h1 class="page-title">Subscription</h1>
@@ -38,7 +39,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
         </article>
         <article class="widget">
           <div class="widget-title">Expired At</div>
-          <div class="widget-value"><?= htmlspecialchars((string) (($currentUser['plan_expired_at'] ?? null) ?: '-')) ?></div>
+          <div class="widget-value"><?= htmlspecialchars($fmtWib($currentUser['plan_expired_at'] ?? null)) ?></div>
           <div class="widget-muted">Auto downgrade ke FREE jika lewat tanggal</div>
         </article>
         <article class="widget">
@@ -105,10 +106,10 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
                   <td><?= htmlspecialchars((string) ($log['action_type'] ?? '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($log['old_plan_code'] ?? null) ?: '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($log['new_plan_code'] ?? null) ?: '-')) ?></td>
-                  <td><?= htmlspecialchars((string) (($log['old_expired_at'] ?? null) ?: '-')) ?></td>
-                  <td><?= htmlspecialchars((string) (($log['new_expired_at'] ?? null) ?: '-')) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($log['old_expired_at'] ?? null)) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($log['new_expired_at'] ?? null)) ?></td>
                   <td><?= htmlspecialchars((string) ($log['actor_label'] ?? '-')) ?></td>
-                  <td><?= htmlspecialchars((string) ($log['created_at'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($log['created_at'] ?? null)) ?></td>
                 </tr>
               <?php endforeach; ?>
             <?php endif; ?>

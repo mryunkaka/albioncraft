@@ -9,6 +9,7 @@
 <?php
 $header_title = 'Albion Crafting Profit Calculator';
 require dirname(__DIR__) . '/partials/auth-shell-start.php';
+$fmtWib = static fn ($value, bool $withTime = true): string => \App\Support\DateFormatter::wib(is_scalar($value) ? (string) $value : null, $withTime);
 ?>
       <section class="page-header">
         <h1 class="page-title">Referral</h1>
@@ -63,7 +64,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
                   <td><?= htmlspecialchars((string) (($reward['referred_username'] ?? null) ?: '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($reward['referral_code_used'] ?? null) ?: '-')) ?></td>
                   <td><?= htmlspecialchars((string) (($reward['notes'] ?? null) ?: '-')) ?></td>
-                  <td><?= htmlspecialchars((string) ($reward['created_at'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars($fmtWib($reward['created_at'] ?? null)) ?></td>
                 </tr>
               <?php endforeach; ?>
             <?php endif; ?>
