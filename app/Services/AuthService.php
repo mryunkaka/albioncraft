@@ -137,7 +137,7 @@ final class AuthService
         $sessionToken = $this->authSessions->issue((int) $user['id']);
 
         Session::regenerate();
-        Session::put('auth', [
+        $authPayload = [
             'user_id' => (int) $user['id'],
             'username' => (string) $user['username'],
             'email' => (string) $user['email'],
@@ -146,7 +146,9 @@ final class AuthService
             'plan_name' => (string) ($plan['name'] ?? 'Free'),
             'plan_expired_at' => $user['plan_expired_at'] ?? null,
             'session_token' => $sessionToken,
-        ]);
+        ];
+        Session::put('auth', $authPayload);
+        $this->authSessions->persistCurrent($authPayload);
 
         return ['ok' => true, 'errors' => []];
     }

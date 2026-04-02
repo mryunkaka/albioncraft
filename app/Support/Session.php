@@ -6,19 +6,16 @@ namespace App\Support;
 
 final class Session
 {
-    private const COOKIE_LIFETIME = 315360000;
+    private const COOKIE_LIFETIME = 157680000;
 
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             ini_set('session.gc_maxlifetime', (string) self::COOKIE_LIFETIME);
-            session_set_cookie_params([
-                'lifetime' => self::COOKIE_LIFETIME,
-                'path' => '/',
-                'secure' => (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]);
+            ini_set('session.cookie_lifetime', (string) self::COOKIE_LIFETIME);
+            ini_set('session.use_only_cookies', '1');
+            ini_set('session.cookie_httponly', '1');
+            session_set_cookie_params(self::sessionCookieOptions());
             session_start();
         }
     }
@@ -65,16 +62,7 @@ final class Session
 
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                (bool) $params['secure'],
-                (bool) $params['httponly']
-            );
+            setcookie(session_name(), '', self::cookieOptions(-42000));
         }
         session_destroy();
     }
@@ -90,5 +78,45 @@ final class Session
         $value = self::get($sessionKey);
         self::forget($sessionKey);
         return is_string($value) ? $value : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function sessionCookieOptions(): array
+    {
+        return [
+            'lifetime' => self::COOKIE_LIFETIME,
+            'path' => '/',
+            'secure' => self::isSecureRequest(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function cookieOptions(int $lifetime): array
+    {
+        $expires = $lifetime > 0 ? time() + $lifetime : time() + $lifetime;
+
+        return [
+            'expires' => $expires,
+            'path' => '/',
+            'secure' => self::isSecureRequest(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+    }
+
+    private static function isSecureRequest(): bool
+    {
+        if (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+
+        $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        return $forwardedProto === 'https';
     }
 }

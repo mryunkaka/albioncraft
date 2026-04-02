@@ -6,6 +6,7 @@ $php = PHP_BINARY;
 $root = dirname(__DIR__);
 
 $tests = [
+    'Auth Session' => $root . '/tests/run_auth_session_tests.php',
     'Calculation Engine' => $root . '/tests/run_calculation_engine_tests.php',
     'Subscription Referral Admin' => $root . '/tests/run_subscription_referral_admin_tests.php',
     'Market Price Service' => $root . '/tests/run_market_price_service_tests.php',

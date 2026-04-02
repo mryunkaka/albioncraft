@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/autoload.php';
 
+use App\Services\AuthSessionService;
 use App\Support\Router;
 use App\Support\Env;
 use App\Support\Session;
 
 Env::load(dirname(__DIR__) . '/.env');
 Session::start();
+(new AuthSessionService())->bootstrap();
 
 set_exception_handler(static function (Throwable $exception): void {
     $root = dirname(__DIR__);

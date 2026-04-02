@@ -484,6 +484,11 @@
       min-width: 120px;
     }
 
+    .selection-helper-item-grid > [data-helper-name="item_output_qty"] {
+      flex: 0 0 140px;
+      min-width: 120px;
+    }
+
     .selection-helper-item-grid > .selection-helper-copy-btn {
       flex: 0 0 auto;
     }
@@ -695,8 +700,8 @@ $calculatorTooltips = [
     'image' => '/assets/images/output_quantity.png',
   ],
   'target_output_qty' => [
-    'title' => 'Target Jumlah Craft',
-    'body' => "Target total item jadi yang ingin kamu produksi.\nSistem akan menyesuaikan iterasi dan kebutuhan material agar mendekati jumlah ini.",
+    'title' => 'Target Jumlah Output',
+    'body' => "Target total item jadi yang ingin kamu produksi.\nJika helper tunggangan aktif, nilai ini dihitung dari craft base + bonus craft RRR, lalu dikali output per recipe.",
   ],
   'premium_status' => [
     'title' => 'Premium',
@@ -809,7 +814,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
   <div class="card-title-row">
     <div>
       <h2 class="card-title">Bantu Seleksi Item</h2>
-      <p class="selection-helper-note">Isi nama item, item value, nama material, recipe/qty, bobot, dan return type. Bandingkan data per kota, lalu tombol push akan memilih harga terbaik dan menghitung target craft aman bila mode tunggangan aktif.</p>
+      <p class="selection-helper-note">Isi nama item, item value, output quantity per recipe, nama material, recipe/qty, bobot per item (kg), dan return type. Bandingkan data per kota, lalu tombol push akan memilih harga terbaik dan menghitung craft base, bonus craft dari RRR, serta target output aman bila mode tunggangan aktif.</p>
     </div>
     <button class="button button-ghost" type="button" id="close-selection-helper-btn">Kembali ke Input</button>
   </div>
@@ -819,6 +824,10 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
       <label class="field">
         <span class="field-label">Muatan Maks Tunggangan</span>
         <input class="input" type="number" step="0.01" min="0" id="helper-mount-capacity" placeholder="Contoh: 1370">
+      </label>
+      <label class="field">
+        <span class="field-label">Kapasitas Tambahan Karakter / Tas</span>
+        <input class="input" type="number" step="0.01" min="0" id="helper-mounted-extra-capacity" placeholder="Opsional: contoh 223">
       </label>
     </div>
   </div>
@@ -893,7 +902,7 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
         <input class="input" name="output_qty" type="number" step="1" value="1" min="1">
       </label>
       <label class="field">
-        <?php renderCalculatorLabel('Target Jumlah Craft', 'target_output_qty', $calculatorTooltips); ?>
+        <?php renderCalculatorLabel('Target Jumlah Output', 'target_output_qty', $calculatorTooltips); ?>
         <input class="input" name="target_output_qty" type="number" step="1" value="100" min="1">
       </label>
     </div>
@@ -1170,5 +1179,5 @@ require dirname(__DIR__) . '/partials/auth-shell-start.php';
 <script id="calculator-tooltip-map" type="application/json">
   <?= json_encode($calculatorTooltips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 </script>
-<script src="/assets/calculator.js?v=20260331-04"></script>
+<script src="/assets/calculator.js?v=20260331-07"></script>
 <?php require dirname(__DIR__) . '/partials/auth-shell-end.php'; ?>

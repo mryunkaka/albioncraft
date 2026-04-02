@@ -1,5 +1,7 @@
 (function () {
   const STORAGE_KEY = "albion_calc_strict_v1";
+  const SELECTION_HELPER_DEFAULT_BONUS_BASIC = 18;
+  const SELECTION_HELPER_FOCUS_BONUS = 59;
 
   const form = document.getElementById("calc-form");
   const materialsRoot = document.getElementById("materials");
@@ -78,6 +80,7 @@
   const helperToggleMountBtn = document.getElementById("helper-toggle-mount-btn");
   const helperMountFields = document.getElementById("helper-mount-fields");
   const helperMountCapacityInput = document.getElementById("helper-mount-capacity");
+  const helperMountedExtraCapacityInput = document.getElementById("helper-mounted-extra-capacity");
   const calculatorCitiesData = document.getElementById("calculator-cities-data");
   const cityOptions = parseCityOptions();
   const cityAliasMap = {
@@ -552,6 +555,10 @@
     return Number.isFinite(parsed) ? parsed : null;
   }
 
+  function normalizeSelectionHelperMaterialKey(name) {
+    return upper(String(name || "").trim());
+  }
+
   function toInputValue(value) {
     return value == null ? "" : String(value);
   }
@@ -616,8 +623,10 @@
     return {
       itemName: "",
       itemValue: "",
+      outputQty: "",
       mountEnabled: false,
       mountCapacity: "",
+      mountedExtraCapacity: "",
       materials: [
         { name: "", itemValue: "", recipeQty: "", weight: "", returnType: "RETURN" },
       ],
@@ -670,8 +679,10 @@
 
     selectionHelperState.itemName = upper(selectionHelperState.itemName || "");
     selectionHelperState.itemValue = selectionHelperState.itemValue == null ? "" : String(selectionHelperState.itemValue);
+    selectionHelperState.outputQty = selectionHelperState.outputQty == null ? "" : String(selectionHelperState.outputQty);
     selectionHelperState.mountEnabled = !!selectionHelperState.mountEnabled;
     selectionHelperState.mountCapacity = selectionHelperState.mountCapacity == null ? "" : String(selectionHelperState.mountCapacity);
+    selectionHelperState.mountedExtraCapacity = selectionHelperState.mountedExtraCapacity == null ? "" : String(selectionHelperState.mountedExtraCapacity);
   }
 
   function cityLookupKeysForValue(value) {
@@ -734,12 +745,49 @@
   }
 
   function getSelectionHelperOutputQtyPerCraft() {
+    const helperOutputQty = numberOrNull(selectionHelperState && selectionHelperState.outputQty);
+    if (helperOutputQty != null && helperOutputQty > 0) {
+      return helperOutputQty;
+    }
+
     const outputQtyField = form.querySelector('[name="output_qty"]');
     const outputQty = Number((outputQtyField && outputQtyField.value) || "1");
     return Number.isFinite(outputQty) && outputQty > 0 ? outputQty : 1;
   }
 
-  function computeMountHelperTargetOutput(activeMaterialEntries) {
+  function formatMountHelperNumber(value, decimals = 2) {
+    if (!Number.isFinite(value)) return "0";
+    if (Number.isInteger(value)) return String(value);
+    return Number(value).toFixed(decimals).replace(/\.?0+$/, "");
+  }
+
+  function getSelectionHelperRrr(bonusLocalOverride = null) {
+    const bonusBasicField = form.querySelector('[name="bonus_basic"]');
+    const bonusLocalField = form.querySelector('[name="bonus_local"]');
+    const bonusDailyField = form.querySelector('[name="bonus_daily"]');
+    const craftWithFocusField = form.querySelector('[name="craft_with_focus"]');
+
+    const bonusBasic = numberOrNull(bonusBasicField && bonusBasicField.value);
+    const bonusLocal = bonusLocalOverride != null
+      ? Number(bonusLocalOverride)
+      : (numberOrNull(bonusLocalField && bonusLocalField.value) || 0);
+    const bonusDaily = numberOrNull(bonusDailyField && bonusDailyField.value) || 0;
+    const craftWithFocus = String((craftWithFocusField && craftWithFocusField.value) || "0") === "1";
+    const bonusFocus = craftWithFocus ? SELECTION_HELPER_FOCUS_BONUS : 0;
+    const totalBonus = (bonusBasic == null ? SELECTION_HELPER_DEFAULT_BONUS_BASIC : bonusBasic) + bonusLocal + bonusDaily + bonusFocus;
+    const rrr = totalBonus > 0 ? (1 - (1 / (1 + (totalBonus / 100)))) : 0;
+
+    return {
+      bonusBasic: bonusBasic == null ? SELECTION_HELPER_DEFAULT_BONUS_BASIC : bonusBasic,
+      bonusLocal,
+      bonusDaily,
+      bonusFocus,
+      totalBonus,
+      rrr,
+    };
+  }
+
+  function computeMountHelperTargetOutput(activeMaterialEntries, options = {}) {
     ensureSelectionHelperState();
     if (!selectionHelperState.mountEnabled) {
       return null;
@@ -750,28 +798,59 @@
       return null;
     }
 
+    const rrrState = getSelectionHelperRrr(options && options.bonusLocal != null ? options.bonusLocal : null);
+    const rrr = rrrState.rrr;
+
     let totalWeightPerCraft = 0;
+    const materials = [];
     for (const material of activeMaterialEntries) {
       const recipeQty = numberOrNull(material.recipeQty);
       const weight = numberOrNull(material.weight);
       if (recipeQty == null || recipeQty <= 0 || weight == null || weight <= 0) {
-        continue;
+        return null;
       }
-      totalWeightPerCraft += recipeQty * weight;
+
+      const weightPerRecipe = recipeQty * weight;
+      totalWeightPerCraft += weightPerRecipe;
+      materials.push({
+        name: upper(String(material.name || "").trim()) || "MATERIAL",
+        recipeQty,
+        weight,
+        weightPerRecipe,
+      });
     }
 
     if (!(totalWeightPerCraft > 0)) {
       return null;
     }
 
-    const maxCrafts = Math.floor(mountCapacity / totalWeightPerCraft);
+    const mountedExtraCapacity = Math.max(0, numberOrNull(selectionHelperState.mountedExtraCapacity) || 0);
+    const totalCapacity = mountCapacity + mountedExtraCapacity;
+    const baseCrafts = Math.floor(totalCapacity / totalWeightPerCraft);
     const outputQtyPerCraft = getSelectionHelperOutputQtyPerCraft();
+    const bonusCraft = Math.max(0, baseCrafts) * rrr;
+    const totalCraftReal = Math.max(0, baseCrafts) + bonusCraft;
+    const totalOutputBase = Math.max(0, baseCrafts) * outputQtyPerCraft;
+    const totalOutputReal = totalCraftReal * outputQtyPerCraft;
+    const targetOutputQty = Math.max(0, Math.floor(totalOutputReal));
 
     return {
       mountCapacity,
+      mountedExtraCapacity,
+      totalCapacity,
+      rrr,
       totalWeightPerCraft,
-      maxCrafts: Math.max(0, maxCrafts),
-      targetOutputQty: Math.max(0, maxCrafts) * outputQtyPerCraft,
+      baseCrafts: Math.max(0, baseCrafts),
+      outputQtyPerCraft,
+      totalOutputBase,
+      bonusCraft,
+      totalCraftReal,
+      totalOutputReal,
+      targetOutputQty,
+      materials: materials.map((material) => ({
+        ...material,
+        totalMaterial: Math.max(0, baseCrafts) * material.recipeQty,
+      })),
     };
   }
 
@@ -878,7 +957,7 @@
     return { rows, warnings };
   }
 
-    function renderSelectionHelperSummary() {
+  function renderSelectionHelperSummary() {
       if (!selectionHelperSummary) return;
 
     const picks = buildSelectionHelperPicks();
@@ -890,7 +969,9 @@
         weight: String((material && material.weight) || "").trim(),
       }))
       .filter((material) => material.name !== "");
-    const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries);
+    const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries, {
+      bonusLocal: picks.bonus ? picks.bonus.value : null,
+    });
     const lines = [];
 
     if (picks.craft) {
@@ -909,7 +990,22 @@
     });
 
     if (mountComputation) {
-      lines.push(`Tunggangan: kapasitas ${mountComputation.mountCapacity} | bobot/recipe ${mountComputation.totalWeightPerCraft.toFixed(2)} | max craft ${mountComputation.maxCrafts} | target output aman ${mountComputation.targetOutputQty}`);
+      if (mountComputation.mountedExtraCapacity > 0) {
+        lines.push(`Tunggangan: mount ${mountComputation.mountCapacity} kg + tambahan karakter/tas ${formatMountHelperNumber(mountComputation.mountedExtraCapacity, 2)} kg = total ${formatMountHelperNumber(mountComputation.totalCapacity, 2)} kg | RRR ${(mountComputation.rrr * 100).toFixed(2)}%`);
+      } else {
+        lines.push(`Tunggangan: kapasitas ${mountComputation.mountCapacity} kg | RRR ${(mountComputation.rrr * 100).toFixed(2)}%`);
+      }
+      lines.push(`Berat per craft: ${mountComputation.totalWeightPerCraft.toFixed(2)} kg`);
+      lines.push(`Maksimal craft base: ${mountComputation.baseCrafts}`);
+      lines.push(`Output per craft: ${formatMountHelperNumber(mountComputation.outputQtyPerCraft, 4)}`);
+      mountComputation.materials.forEach((row) => {
+        lines.push(`Total bahan ${row.name}: ${formatMountHelperNumber(row.totalMaterial, 4)} | bobot/craft ${row.weightPerRecipe.toFixed(2)} kg (${formatMountHelperNumber(row.recipeQty, 4)} x ${formatMountHelperNumber(row.weight, 4)} kg)`);
+      });
+      lines.push(`Output tanpa RRR: ${formatMountHelperNumber(mountComputation.totalOutputBase, 4)}`);
+      lines.push(`Bonus craft dari RRR: ${formatMountHelperNumber(mountComputation.bonusCraft, 2)}`);
+      lines.push(`Total craft setelah RRR: ${formatMountHelperNumber(mountComputation.totalCraftReal, 2)}`);
+      lines.push(`Total output akhir: ${formatMountHelperNumber(mountComputation.totalOutputReal, 2)}`);
+      lines.push(`Target output aman: ${mountComputation.targetOutputQty}`);
     }
 
     if (lines.length === 0) {
@@ -935,6 +1031,9 @@
     if (helperMountCapacityInput) {
       helperMountCapacityInput.value = String(selectionHelperState.mountCapacity || "");
     }
+    if (helperMountedExtraCapacityInput) {
+      helperMountedExtraCapacityInput.value = String(selectionHelperState.mountedExtraCapacity || "");
+    }
 
     const itemField = document.createElement("div");
     itemField.className = "field";
@@ -945,6 +1044,7 @@
       <div class="selection-helper-item-grid">
         <input class="input" type="text" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T4.1">
         <input class="input selection-helper-item-value-input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Item value">
+        <input class="input selection-helper-item-output-input" type="number" step="1" min="1" data-helper-name="item_output_qty" placeholder="Output / craft">
         <button class="button button-ghost selection-helper-copy-btn" type="button" data-helper-copy="item">Copy Teks</button>
       </div>
     `;
@@ -955,6 +1055,10 @@
     const itemValueInput = itemField.querySelector('[data-helper-name="item_value"]');
     if (itemValueInput) {
       itemValueInput.value = String(selectionHelperState.itemValue || "");
+    }
+    const itemOutputInput = itemField.querySelector('[data-helper-name="item_output_qty"]');
+    if (itemOutputInput) {
+      itemOutputInput.value = String(selectionHelperState.outputQty || "");
     }
     selectionHelperNames.appendChild(itemField);
 
@@ -972,7 +1076,7 @@
           <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Contoh: CRENELLATED BURDOCK T4.1">
           <input class="input selection-helper-material-value-input" type="number" step="0.01" min="0" data-helper-name="material_item_value" data-material-index="${index}" placeholder="Item value">
           <input class="input" type="number" step="0.0001" min="0" data-helper-name="material_recipe_qty" data-material-index="${index}" placeholder="Recipe/Qty">
-          <input class="input" type="number" step="0.01" min="0" data-helper-name="material_weight" data-material-index="${index}" placeholder="Bobot">
+          <input class="input" type="number" step="0.01" min="0" data-helper-name="material_weight" data-material-index="${index}" placeholder="Bobot/item (kg)">
           <select class="select" data-helper-name="material_return_type" data-material-index="${index}">
             <option value="RETURN">RETURN</option>
             <option value="NON_RETURN">NON_RETURN</option>
@@ -1138,6 +1242,10 @@
     if (currentItemValue !== "") {
       selectionHelperState.itemValue = currentItemValue;
     }
+    const currentOutputQty = String((form.querySelector('[name="output_qty"]') || {}).value || "").trim();
+    if (currentOutputQty !== "") {
+      selectionHelperState.outputQty = currentOutputQty;
+    }
 
     const materialRows = Array.from(materialsRoot ? materialsRoot.querySelectorAll(".calc-material-row") : []);
     const materialNames = materialRows.map((row) => {
@@ -1150,16 +1258,28 @@
       && materialNames.every((name, index) => name === defaultExampleNames[index]);
 
     if (materialRows.length > 0 && materialNames.some(Boolean) && !isDefaultExample) {
+      const existingMaterialsByName = new Map();
+      selectionHelperState.materials.forEach((material) => {
+        const key = normalizeSelectionHelperMaterialKey(material && material.name);
+        if (key === "") return;
+        existingMaterialsByName.set(key, {
+          weight: material && material.weight != null ? String(material.weight) : "",
+          returnType: material && material.returnType != null ? String(material.returnType) : "RETURN",
+        });
+      });
+
       selectionHelperState.materials = materialRows.map((row) => {
         const field = row.querySelector(".material-name");
         const itemValueField = row.querySelector(".material-item-value");
         const qtyField = row.querySelector(".material-qty");
         const returnTypeField = row.querySelector(".material-type");
+        const materialName = upper((field && field.value) || "");
+        const existingDraft = existingMaterialsByName.get(normalizeSelectionHelperMaterialKey(materialName)) || null;
         return {
-          name: upper((field && field.value) || ""),
+          name: materialName,
           itemValue: String((itemValueField && itemValueField.value) || "").trim(),
           recipeQty: String((qtyField && qtyField.value) || "").trim(),
-          weight: "",
+          weight: existingDraft ? String(existingDraft.weight || "") : "",
           returnType: String((returnTypeField && returnTypeField.value) || "RETURN"),
         };
       });
@@ -1172,9 +1292,7 @@
 
     selectionHelperVisible = !!show;
     if (show) {
-      if (!selectionHelperHasDraft) {
-        syncSelectionHelperFromCurrentForm();
-      }
+      syncSelectionHelperFromCurrentForm();
       renderSelectionHelper();
       inputParametersCard.hidden = true;
       selectionHelperCard.hidden = false;
@@ -1456,6 +1574,7 @@
     ensureSelectionHelperState();
     const itemName = upper(selectionHelperState.itemName || "");
     const itemValue = String(selectionHelperState.itemValue || "").trim();
+    const outputQty = String(selectionHelperState.outputQty || "").trim();
     const activeMaterialEntries = selectionHelperState.materials
       .map((material, index) => ({
         index,
@@ -1472,6 +1591,11 @@
       return;
     }
 
+    if (!outputQty || Number(outputQty) <= 0) {
+      setFeedback("Output Quantity / Recipe di card bantu wajib diisi dan harus lebih dari 0.");
+      return;
+    }
+
     if (activeMaterialEntries.length === 0) {
       setFeedback("Isi minimal satu nama material di card bantu.");
       return;
@@ -1485,7 +1609,9 @@
         return_type: material.returnType,
       }));
       const helperMaterialPicks = activeMaterialEntries.map((material) => picks.materials[material.index] || null);
-      const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries);
+      const mountComputation = computeMountHelperTargetOutput(activeMaterialEntries, {
+        bonusLocal: picks.bonus ? picks.bonus.value : null,
+      });
       const helperSaveRows = buildSelectionHelperSaveRows(activeMaterialEntries);
       const persistResult = await persistSelectionHelperMarketData({
         itemName,
@@ -1512,7 +1638,7 @@
       sellPriceCitySelect.value = picks.sell && picks.sell.cityOption ? String(picks.sell.cityOption.id || "") : "";
     }
     setFieldValue("item_value", itemValue);
-    setFieldValue("output_qty", "");
+    setFieldValue("output_qty", outputQty);
     setFieldValue("target_output_qty", mountComputation ? mountComputation.targetOutputQty : "");
 
     clearMaterials();
@@ -1543,7 +1669,7 @@
     } else if (persistResult.messages.length > 0) {
       setFeedback(persistResult.messages.join(" "));
     } else if (mountComputation) {
-      setFeedback(`Target output aman diset ke ${mountComputation.targetOutputQty} berdasarkan muatan tunggangan ${mountComputation.mountCapacity}.`, "success");
+      setFeedback(`Target output aman diset ke ${mountComputation.targetOutputQty} item (craft base ${mountComputation.baseCrafts}, bonus ${formatMountHelperNumber(mountComputation.bonusCraft, 2)}, total craft ${formatMountHelperNumber(mountComputation.totalCraftReal, 2)}, RRR ${(mountComputation.rrr * 100).toFixed(2)}%).`, "success");
     } else {
       setFeedback("");
     }
@@ -2211,6 +2337,14 @@
         return;
       }
 
+      if (helperNameType === "item_output_qty") {
+        selectionHelperState.outputQty = target.value;
+        selectionHelperHasDraft = true;
+        scheduleSave();
+        renderSelectionHelperSummary();
+        return;
+      }
+
       if (helperNameType === "material") {
         const index = Number(target.dataset.materialIndex || "-1");
         if (index < 0) return;
@@ -2278,6 +2412,7 @@
       selectionHelperState.materials[index].returnType = String(target.value || "RETURN");
       selectionHelperHasDraft = true;
       scheduleSave();
+      renderSelectionHelperSummary();
     });
 
     selectionHelperNames.addEventListener("click", (ev) => {
@@ -2415,6 +2550,7 @@
       selectionHelperState.mountEnabled = !selectionHelperState.mountEnabled;
       if (!selectionHelperState.mountEnabled) {
         selectionHelperState.mountCapacity = "";
+        selectionHelperState.mountedExtraCapacity = "";
       }
       selectionHelperHasDraft = true;
       renderSelectionHelper();
@@ -2426,6 +2562,16 @@
     helperMountCapacityInput.addEventListener("input", () => {
       ensureSelectionHelperState();
       selectionHelperState.mountCapacity = helperMountCapacityInput.value;
+      selectionHelperHasDraft = true;
+      scheduleSave();
+      renderSelectionHelperSummary();
+    });
+  }
+
+  if (helperMountedExtraCapacityInput) {
+    helperMountedExtraCapacityInput.addEventListener("input", () => {
+      ensureSelectionHelperState();
+      selectionHelperState.mountedExtraCapacity = helperMountedExtraCapacityInput.value;
       selectionHelperHasDraft = true;
       scheduleSave();
       renderSelectionHelperSummary();
