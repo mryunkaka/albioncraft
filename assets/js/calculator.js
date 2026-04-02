@@ -744,6 +744,86 @@
     return name !== "" ? name : `Material ${index + 1}`;
   }
 
+  function getSelectionHelperItemLabel() {
+    const name = String((selectionHelperState && selectionHelperState.itemName) || "").trim();
+    return name !== "" ? name : "Item Craft";
+  }
+
+  function getSelectionHelperHeaderCopyValue(kind, index = -1) {
+    if (kind === "item") {
+      return stripTierEnchantmentLabel(selectionHelperState.itemName || "");
+    }
+    if (kind === "material") {
+      const material = selectionHelperState.materials[index] || null;
+      return stripTierEnchantmentLabel(material && material.name ? String(material.name) : "");
+    }
+    return "";
+  }
+
+  function getSelectionHelperColumnWidth(label) {
+    const normalized = String(label || "").trim();
+    const length = normalized.length;
+    const widthCh = Math.max(10, Math.min(24, length + 3));
+    return `${widthCh}ch`;
+  }
+
+  function buildSelectionHelperHeaderCell(label, kind, options = {}) {
+    const materialIndex = options && Number.isInteger(options.materialIndex) ? options.materialIndex : -1;
+    const copyValue = getSelectionHelperHeaderCopyValue(kind, materialIndex);
+    const isDisabled = String(copyValue || "").trim() === "";
+    const materialAttr = materialIndex >= 0 ? ` data-material-index="${materialIndex}"` : "";
+    const width = getSelectionHelperColumnWidth(label);
+
+    return `
+      <th class="right" style="width:${width}; min-width:${width};">
+        <span class="selection-helper-header-cell">
+          <button
+            class="selection-helper-header-copy-btn"
+            type="button"
+            style="width:100%;"
+            title="${isDisabled ? "Isi nama dulu" : "Salin nama"}"
+            aria-label="${isDisabled ? "Isi nama dulu" : `Salin ${label}`}"
+            data-helper-header-copy="${escapeHtml(kind)}"${materialAttr}
+            ${isDisabled ? " disabled" : ""}
+          >
+            <span class="selection-helper-header-label">${escapeHtml(label)}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 9V5c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2h-4v2c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V9c0-1.1.9-2 2-2h4c0 1.1 0 1.1 0 2H5v10h8v-2h-2c-1.1 0-2-.9-2-2V9h0Zm2-4v10h8V5h-8Z"></path>
+            </svg>
+          </button>
+          <span class="selection-helper-header-copy-feedback" hidden>Berhasil tercopy</span>
+        </span>
+      </th>
+    `;
+  }
+
+  async function handleSelectionHelperHeaderCopy(trigger) {
+    if (!(trigger instanceof HTMLElement)) return;
+
+    const copyBtn = trigger.closest("[data-helper-header-copy]");
+    if (!(copyBtn instanceof HTMLButtonElement) || copyBtn.disabled) return;
+
+    const now = Date.now();
+    const lastTriggeredAt = Number(copyBtn.dataset.copyTriggeredAt || "0");
+    const throttled = now - lastTriggeredAt < 350;
+    if (throttled) return;
+    copyBtn.dataset.copyTriggeredAt = String(now);
+
+    const copyKind = String(copyBtn.getAttribute("data-helper-header-copy") || "");
+    const materialIndex = Number(copyBtn.getAttribute("data-material-index") || "-1");
+    const copyValue = copyKind === "material"
+      ? getSelectionHelperHeaderCopyValue("material", materialIndex)
+      : getSelectionHelperHeaderCopyValue("item");
+    const copied = await copyTextToClipboard(copyValue);
+    const feedback = copyBtn.parentElement ? copyBtn.parentElement.querySelector(".selection-helper-header-copy-feedback") : null;
+    if (!(feedback instanceof HTMLElement)) return;
+    feedback.textContent = copied ? "Berhasil tercopy" : "Gagal copy";
+    feedback.hidden = false;
+    window.setTimeout(() => {
+      feedback.hidden = true;
+    }, 1400);
+  }
+
   function getSelectionHelperOutputQtyPerCraft() {
     const helperOutputQty = numberOrNull(selectionHelperState && selectionHelperState.outputQty);
     if (helperOutputQty != null && helperOutputQty > 0) {
@@ -959,6 +1039,9 @@
 
   function renderSelectionHelperSummary() {
       if (!selectionHelperSummary) return;
+    selectionHelperSummary.hidden = true;
+    selectionHelperSummary.textContent = "";
+    return;
 
     const picks = buildSelectionHelperPicks();
     const activeMaterialEntries = selectionHelperState.materials
@@ -1042,10 +1125,9 @@
         <span class="selection-helper-name-text">Nama Item Craft</span>
       </span>
       <div class="selection-helper-item-grid">
-        <input class="input" type="text" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T4.1">
-        <input class="input selection-helper-item-value-input" type="number" step="0.01" min="0" data-helper-name="item_value" placeholder="Item value">
-        <input class="input selection-helper-item-output-input" type="number" step="1" min="1" data-helper-name="item_output_qty" placeholder="Output / craft">
-        <button class="button button-ghost selection-helper-copy-btn" type="button" data-helper-copy="item">Copy Teks</button>
+        <input class="input" type="text" id="selection-helper-item-name" name="selection_helper_item_name" data-helper-name="item" placeholder="Contoh: BELATI PENGEMBARA T4.1">
+        <input class="input selection-helper-item-value-input" type="number" step="0.01" min="0" id="selection-helper-item-value" name="selection_helper_item_value" data-helper-name="item_value" placeholder="Item value">
+        <input class="input selection-helper-item-output-input" type="number" step="1" min="1" id="selection-helper-item-output-qty" name="selection_helper_item_output_qty" data-helper-name="item_output_qty" placeholder="Output / craft">
       </div>
     `;
     const itemInput = itemField.querySelector('[data-helper-name="item"]');
@@ -1073,15 +1155,14 @@
           </span>
         </span>
         <div class="selection-helper-material-grid">
-          <input class="input" type="text" data-helper-name="material" data-material-index="${index}" placeholder="Contoh: CRENELLATED BURDOCK T4.1">
-          <input class="input selection-helper-material-value-input" type="number" step="0.01" min="0" data-helper-name="material_item_value" data-material-index="${index}" placeholder="Item value">
-          <input class="input" type="number" step="0.0001" min="0" data-helper-name="material_recipe_qty" data-material-index="${index}" placeholder="Recipe/Qty">
-          <input class="input" type="number" step="0.01" min="0" data-helper-name="material_weight" data-material-index="${index}" placeholder="Bobot/item (kg)">
-          <select class="select" data-helper-name="material_return_type" data-material-index="${index}">
+          <input class="input" type="text" id="selection-helper-material-name-${index}" name="selection_helper_material_name_${index}" data-helper-name="material" data-material-index="${index}" placeholder="Contoh: CRENELLATED BURDOCK T4.1">
+          <input class="input selection-helper-material-value-input" type="number" step="0.01" min="0" id="selection-helper-material-value-${index}" name="selection_helper_material_value_${index}" data-helper-name="material_item_value" data-material-index="${index}" placeholder="Item value">
+          <input class="input" type="number" step="0.0001" min="0" id="selection-helper-material-recipe-qty-${index}" name="selection_helper_material_recipe_qty_${index}" data-helper-name="material_recipe_qty" data-material-index="${index}" placeholder="Recipe/Qty">
+          <input class="input" type="number" step="0.01" min="0" id="selection-helper-material-weight-${index}" name="selection_helper_material_weight_${index}" data-helper-name="material_weight" data-material-index="${index}" placeholder="Bobot/item (kg)">
+          <select class="select" id="selection-helper-material-return-type-${index}" name="selection_helper_material_return_type_${index}" data-helper-name="material_return_type" data-material-index="${index}">
             <option value="RETURN">RETURN</option>
             <option value="NON_RETURN">NON_RETURN</option>
           </select>
-          <button class="button button-ghost selection-helper-copy-btn" type="button" data-helper-copy="material" data-material-index="${index}">Copy Teks</button>
         </div>
       `;
       const input = field.querySelector('[data-helper-name="material"]');
@@ -1110,17 +1191,18 @@
 
   function renderSelectionHelperTable() {
     if (!selectionHelperHead || !selectionHelperBody) return;
+    const itemColumnWidth = getSelectionHelperColumnWidth(getSelectionHelperItemLabel());
 
     const headerCells = [
       "<tr>",
       "<th>Kota</th>",
       "<th class=\"right\">Craft Fee</th>",
       "<th class=\"right\">Bonus</th>",
-      `<th class="right">Item Craft</th>`,
+      buildSelectionHelperHeaderCell(getSelectionHelperItemLabel(), "item"),
     ];
 
     selectionHelperState.materials.forEach((_, index) => {
-      headerCells.push(`<th class="right">${getSelectionHelperMaterialLabel(index)}</th>`);
+      headerCells.push(buildSelectionHelperHeaderCell(getSelectionHelperMaterialLabel(index), "material", { materialIndex: index }));
     });
 
     headerCells.push("<th>Action</th>");
@@ -1128,13 +1210,18 @@
     selectionHelperHead.innerHTML = headerCells.join("");
 
     selectionHelperBody.innerHTML = selectionHelperState.rows.map((row, rowIndex) => {
-      const materialCells = selectionHelperState.materials.map((_, materialIndex) => `
-        <td>
+      const materialCells = selectionHelperState.materials.map((_, materialIndex) => {
+        const materialWidth = getSelectionHelperColumnWidth(getSelectionHelperMaterialLabel(materialIndex));
+        return `
+        <td style="width:${materialWidth}; min-width:${materialWidth};">
           <input
-            class="input"
+            class="input selection-helper-price-input"
+            style="width:${materialWidth}; min-width:${materialWidth};"
             type="number"
             step="0.01"
             min="0"
+            id="selection-helper-row-${rowIndex}-material-${materialIndex}"
+            name="selection_helper_row_${rowIndex}_material_${materialIndex}"
             placeholder="${escapeHtml(getSelectionHelperMaterialLabel(materialIndex))} di kota ini"
             value="${escapeHtml(toInputValue(Array.isArray(row.materials) ? row.materials[materialIndex] : ""))}"
             data-helper-row-index="${rowIndex}"
@@ -1142,13 +1229,16 @@
             data-helper-material-index="${materialIndex}"
           >
         </td>
-      `).join("");
+      `;
+      }).join("");
 
       return `
         <tr>
           <td>
             <select
-              class="select helper-city-select"
+              class="select helper-city-select selection-helper-city-input"
+              id="selection-helper-row-${rowIndex}-city"
+              name="selection_helper_row_${rowIndex}_city"
               data-helper-row-index="${rowIndex}"
               data-helper-field="city"
             >
@@ -1157,10 +1247,12 @@
           </td>
           <td>
             <input
-              class="input"
+              class="input selection-helper-compact-input"
               type="number"
               step="0.01"
               min="0"
+              id="selection-helper-row-${rowIndex}-craft-fee"
+              name="selection_helper_row_${rowIndex}_craft_fee"
               placeholder="Biaya craft di kota ini"
               value="${escapeHtml(toInputValue(row.craftFee))}"
               data-helper-row-index="${rowIndex}"
@@ -1169,10 +1261,12 @@
           </td>
           <td>
             <input
-              class="input"
+              class="input selection-helper-compact-input"
               type="number"
               step="0.01"
               min="0"
+              id="selection-helper-row-${rowIndex}-bonus"
+              name="selection_helper_row_${rowIndex}_bonus"
               placeholder="Bonus lokal kota ini"
               value="${escapeHtml(toInputValue(row.bonus))}"
               data-helper-row-index="${rowIndex}"
@@ -1181,10 +1275,13 @@
           </td>
           <td>
             <input
-              class="input"
+              class="input selection-helper-price-input"
+              style="width:${itemColumnWidth}; min-width:${itemColumnWidth};"
               type="number"
               step="0.01"
               min="0"
+              id="selection-helper-row-${rowIndex}-item-price"
+              name="selection_helper_row_${rowIndex}_item_price"
               placeholder="Harga jual item craft"
               value="${escapeHtml(toInputValue(row.itemPrice))}"
               data-helper-row-index="${rowIndex}"
@@ -2001,8 +2098,10 @@
   async function copyTextToClipboard(text) {
     if (!text) return false;
     if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_) {}
     }
 
     const textarea = document.createElement("textarea");
@@ -2419,21 +2518,6 @@
       const target = ev.target;
       if (!(target instanceof HTMLElement)) return;
 
-      const copyBtn = target.closest("[data-helper-copy]");
-      if (copyBtn) {
-        const copyType = String(copyBtn.getAttribute("data-helper-copy") || "");
-        if (copyType === "item") {
-          copyTextToClipboard(stripTierEnchantmentLabel(selectionHelperState.itemName || ""));
-          return;
-        }
-        if (copyType === "material") {
-          const materialIndex = Number(copyBtn.getAttribute("data-material-index") || "-1");
-          const material = selectionHelperState.materials[materialIndex] || null;
-          copyTextToClipboard(stripTierEnchantmentLabel(material && material.name ? String(material.name) : ""));
-          return;
-        }
-      }
-
       const removeMaterialBtn = target.closest("[data-helper-remove-material]");
       if (!removeMaterialBtn) return;
 
@@ -2442,6 +2526,20 @@
       selectionHelperHasDraft = true;
       removeSelectionHelperMaterial(materialIndex);
       scheduleSave();
+    });
+  }
+
+  if (selectionHelperHead) {
+    selectionHelperHead.addEventListener("pointerup", async (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+      await handleSelectionHelperHeaderCopy(target);
+    });
+
+    selectionHelperHead.addEventListener("click", async (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement)) return;
+      await handleSelectionHelperHeaderCopy(target);
     });
   }
 
